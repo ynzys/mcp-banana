@@ -101,6 +101,28 @@ export class MCPServerImpl {
                 description:
                   'Optional absolute path to source image for image-to-image generation. Use when generating variations, style transfers, or similar images based on an existing image (must be an absolute path)',
               },
+              inputImage: {
+                type: 'string' as const,
+                description:
+                  'Optional base64 encoded image data for image-to-image generation. Alternative to inputImagePath when image data is already in memory. Do not include data URI prefix (e.g., "data:image/png;base64,")',
+              },
+              inputImageMimeType: {
+                type: 'string' as const,
+                description:
+                  'MIME type of the input image provided via inputImage. Required when inputImage is provided for accurate processing',
+                enum: [
+                  'image/jpeg',
+                  'image/png',
+                  'image/webp',
+                  'image/gif',
+                  'image/bmp',
+                ],
+              },
+              returnBase64: {
+                type: 'boolean' as const,
+                description:
+                  'Return the generated image as base64 data in the response. The image is always saved to disk regardless of this setting. Default: false',
+              },
               blendImages: {
                 type: 'boolean' as const,
                 description:
@@ -240,9 +262,14 @@ export class MCPServerImpl {
 
       // Handle input image if provided
       let inputImageData: string | undefined
+      let inputImageMimeType: string | undefined
       if (params.inputImagePath) {
         const imageBuffer = await fs.readFile(params.inputImagePath)
         inputImageData = imageBuffer.toString('base64')
+      } else if (params.inputImage) {
+        // Use base64 input directly, stripping data URI prefix if present
+        inputImageData = params.inputImage.replace(/^data:image\/[a-z]+;base64,/, '')
+        inputImageMimeType = params.inputImageMimeType
       }
 
       // Generate structured prompt (unless skipped)
@@ -294,6 +321,7 @@ export class MCPServerImpl {
       const generationResult = await this.geminiClient.generateImage({
         prompt: structuredPrompt,
         ...(inputImageData && { inputImage: inputImageData }),
+        ...(inputImageMimeType && { inputImageMimeType }),
         ...(params.aspectRatio && { aspectRatio: params.aspectRatio }),
         ...(params.imageSize && { imageSize: params.imageSize }),
         ...(params.useGoogleSearch !== undefined && { useGoogleSearch: params.useGoogleSearch }),
@@ -322,6 +350,14 @@ export class MCPServerImpl {
       }
 
       // Build response
+      if (params.returnBase64) {
+        const base64Data = generationResult.data.imageData.toString('base64')
+        return this.responseBuilder.buildBase64SuccessResponse(
+          generationResult.data,
+          saveResult.data,
+          base64Data
+        )
+      }
       return this.responseBuilder.buildSuccessResponse(generationResult.data, saveResult.data)
     }, 'image-generation')
 

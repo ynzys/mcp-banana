@@ -38,6 +38,11 @@ const DEFAULT_ERROR_SUGGESTION = 'Please try again or contact support if the pro
  */
 export interface ResponseBuilder {
   buildSuccessResponse(generationResult: GeneratedImageResult, filePath: string): McpToolResponse
+  buildBase64SuccessResponse(
+    generationResult: GeneratedImageResult,
+    filePath: string,
+    base64Data: string
+  ): McpToolResponse
   buildErrorResponse(error: BaseError | Error): McpToolResponse
 }
 
@@ -143,6 +148,48 @@ export function createResponseBuilder(): ResponseBuilder {
           {
             type: 'text',
             text: JSON.stringify(structuredContent),
+          },
+        ],
+        isError: false,
+      }
+    },
+
+    /**
+     * Builds a successful response that includes base64 image data alongside file path
+     * @param generationResult Result from image generation
+     * @param filePath Absolute path to the saved image file
+     * @param base64Data Base64 encoded image data
+     * @returns MCP tool response with both file URI and base64 data
+     */
+    buildBase64SuccessResponse(
+      generationResult: GeneratedImageResult,
+      filePath: string,
+      base64Data: string
+    ): McpToolResponse {
+      const mimeType = getMimeTypeFromPath(filePath)
+      const fileName = path.basename(filePath)
+
+      const responseData = {
+        type: 'resource',
+        resource: {
+          uri: `file://${filePath}`,
+          name: fileName,
+          mimeType,
+        },
+        base64Data,
+        metadata: {
+          model: generationResult.metadata.model,
+          processingTime: 0,
+          contextMethod: 'structured_prompt',
+          timestamp: generationResult.metadata.timestamp.toISOString(),
+        },
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(responseData),
           },
         ],
         isError: false,

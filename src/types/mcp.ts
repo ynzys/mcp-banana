@@ -88,6 +88,8 @@ export interface GenerateImageParams {
   purpose?: string
   /** Quality preset for image generation (default: "fast"). Controls model selection and thinking configuration */
   quality?: ImageQuality
+  /** Return generated image as base64 data in the response (default: false). Image is always saved to disk regardless */
+  returnBase64?: boolean
 }
 
 /**
