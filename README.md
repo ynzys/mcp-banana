@@ -1,9 +1,8 @@
-# MCP Image Generator 🍌
+# MCP Banana 🍌
 
 > AI image generation and editing MCP server for Cursor, Claude Code, Codex, and any MCP-compatible tool — powered by Nano Banana 2 and Nano Banana Pro (Google Gemini).
 
-[![npm version](https://badge.fury.io/js/mcp-image.svg)](https://www.npmjs.com/package/mcp-image)
-[![npm downloads](https://img.shields.io/npm/dm/mcp-image.svg)](https://www.npmjs.com/package/mcp-image)
+[![npm version](https://badge.fury.io/js/@ynzys/mcp-banana.svg)](https://www.npmjs.com/package/@ynzys/mcp-banana)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An MCP server that turns simple text prompts into high-quality images. Unlike a simple API wrapper, this server automatically enhances your prompt and configures sensible defaults for generation — you don't need to learn prompt engineering or tune settings. Just describe what you want.
@@ -61,20 +60,20 @@ Based on the **Subject-Context-Style** framework, covering prompt structure, vis
 ### Install
 
 ```bash
-npx mcp-image skills install --path <target-directory>
+npx @ynzys/mcp-banana skills install --path <target-directory>
 ```
 
 The skill will be placed at `<path>/image-generation/SKILL.md`. Specify the skills directory for your AI tool:
 
 ```bash
 # Cursor
-npx mcp-image skills install --path ~/.cursor/skills
+npx @ynzys/mcp-banana skills install --path ~/.cursor/skills
 
 # Codex
-npx mcp-image skills install --path ~/.codex/skills
+npx @ynzys/mcp-banana skills install --path ~/.codex/skills
 
 # Claude Code
-npx mcp-image skills install --path ~/.claude/skills
+npx @ynzys/mcp-banana skills install --path ~/.claude/skills
 ```
 
 ### When to Use the Skill vs the MCP Server
@@ -108,11 +107,11 @@ Get your API key from [Google AI Studio](https://aistudio.google.com/apikey)
 Add to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.mcp-image]
+[mcp_servers.mcp-banana]
 command = "npx"
-args = ["-y", "mcp-image"]
+args = ["-y", "@ynzys/mcp-banana"]
 
-[mcp_servers.mcp-image.env]
+[mcp_servers.mcp-banana.env]
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 ```
@@ -123,15 +122,32 @@ Add to your Cursor settings:
 - **Global** (all projects): `~/.cursor/mcp.json`
 - **Project-specific**: `.cursor/mcp.json` in your project root
 
+**macOS / Linux:**
 ```json
 {
   "mcpServers": {
-    "mcp-image": {
+    "mcp-banana": {
       "command": "npx",
-      "args": ["-y", "mcp-image"],
+      "args": ["-y", "@ynzys/mcp-banana"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+      }
+    }
+  }
+}
+```
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "mcp-banana": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@ynzys/mcp-banana"],
+      "env": {
+        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
       }
     }
   }
@@ -144,13 +160,47 @@ Run in your project directory to enable for that project:
 
 ```bash
 cd /path/to/your/project
-claude mcp add mcp-image --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-image
+claude mcp add mcp-banana --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
 ```
 
 Or add globally for all projects:
 
 ```bash
-claude mcp add mcp-image --scope user --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-image
+claude mcp add mcp-banana --scope user --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
+```
+
+Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for project):
+
+**macOS / Linux:**
+```json
+{
+  "mcpServers": {
+    "mcp-banana": {
+      "command": "npx",
+      "args": ["-y", "@ynzys/mcp-banana"],
+      "env": {
+        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+      }
+    }
+  }
+}
+```
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "mcp-banana": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@ynzys/mcp-banana"],
+      "env": {
+        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
+      }
+    }
+  }
+}
 ```
 
 ⚠️ **Security Note**: Never commit your API key to version control. Keep it secure and use environment-specific configuration.
@@ -182,7 +232,7 @@ To override per-request, just tell your AI assistant (e.g., "generate in high qu
 
 **Codex:**
 ```toml
-[mcp_servers.mcp-image.env]
+[mcp_servers.mcp-banana.env]
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_QUALITY = "balanced"
 ```
@@ -192,7 +242,7 @@ Add `"IMAGE_QUALITY": "balanced"` to the env section in your config.
 
 **Claude Code:**
 ```bash
-claude mcp add mcp-image --env GEMINI_API_KEY=your-api-key --env IMAGE_QUALITY=balanced --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-image
+claude mcp add mcp-banana --env GEMINI_API_KEY=your-api-key --env IMAGE_QUALITY=balanced --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
 ```
 
 ### Skip Prompt Enhancement
@@ -250,9 +300,13 @@ The server uses a two-stage process with separate models for each stage:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `prompt` | string | ✅ | Text description or editing instruction |
+| `prompt` | string | Yes | Text description or editing instruction |
 | `quality` | string | - | Quality preset: `fast` (default), `balanced`, `quality`. Overrides `IMAGE_QUALITY` env var for this request |
 | `inputImagePath` | string | - | Absolute path to input image for image-to-image editing |
+| `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Alternative to `inputImagePath` |
+| `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Used with `inputImage` |
+| `inputImages` | array | - | Multiple input images for multi-image composition. Each item: `{ data: string, mimeType: string }`. Cannot be used with `inputImage`/`inputImagePath` |
+| `returnBase64` | boolean | - | Return the generated image as base64 data in the response. Image is always saved to disk regardless |
 | `fileName` | string | - | Custom filename for output (auto-generated if not specified) |
 | `aspectRatio` | string | - | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, `1:4`, `1:8`, `4:1`, `8:1` |
 | `imageSize` | string | - | `1K`, `2K`, `4K`. Leave unspecified for standard quality |
@@ -327,4 +381,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Need help?** [Open an issue](https://github.com/shinpr/mcp-image/issues) or check the [troubleshooting section](#troubleshooting) above.
+**Need help?** [Open an issue](https://github.com/ynzys/mcp-banana/issues) or check the [troubleshooting section](#troubleshooting) above.

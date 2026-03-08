@@ -118,6 +118,32 @@ export class MCPServerImpl {
                   'image/bmp',
                 ],
               },
+              inputImages: {
+                type: 'array' as const,
+                description:
+                  'Multiple input images for multi-image composition. Cannot be used together with inputImage or inputImagePath. Each item requires base64 data and MIME type.',
+                items: {
+                  type: 'object' as const,
+                  properties: {
+                    data: {
+                      type: 'string' as const,
+                      description: 'Base64 encoded image data. Do not include data URI prefix.',
+                    },
+                    mimeType: {
+                      type: 'string' as const,
+                      description: 'MIME type of the image',
+                      enum: [
+                        'image/jpeg',
+                        'image/png',
+                        'image/webp',
+                        'image/gif',
+                        'image/bmp',
+                      ],
+                    },
+                  },
+                  required: ['data', 'mimeType'],
+                },
+              },
               returnBase64: {
                 type: 'boolean' as const,
                 description:
@@ -263,7 +289,17 @@ export class MCPServerImpl {
       // Handle input image if provided
       let inputImageData: string | undefined
       let inputImageMimeType: string | undefined
-      if (params.inputImagePath) {
+      let inputImagesData: Array<{ data: string; mimeType: string }> | undefined
+      if (params.inputImages && params.inputImages.length > 0) {
+        // Multi-image: strip data URI prefix from each image
+        inputImagesData = params.inputImages.map((img) => ({
+          data: img.data.replace(/^data:image\/[a-z]+;base64,/, ''),
+          mimeType: img.mimeType,
+        }))
+        // Use first image for prompt enhancement context
+        inputImageData = inputImagesData[0]?.data
+        inputImageMimeType = inputImagesData[0]?.mimeType
+      } else if (params.inputImagePath) {
         const imageBuffer = await fs.readFile(params.inputImagePath)
         inputImageData = imageBuffer.toString('base64')
       } else if (params.inputImage) {
@@ -320,8 +356,9 @@ export class MCPServerImpl {
 
       const generationResult = await this.geminiClient.generateImage({
         prompt: structuredPrompt,
-        ...(inputImageData && { inputImage: inputImageData }),
-        ...(inputImageMimeType && { inputImageMimeType }),
+        ...(inputImagesData && { inputImages: inputImagesData }),
+        ...(!inputImagesData && inputImageData && { inputImage: inputImageData }),
+        ...(!inputImagesData && inputImageMimeType && { inputImageMimeType }),
         ...(params.aspectRatio && { aspectRatio: params.aspectRatio }),
         ...(params.imageSize && { imageSize: params.imageSize }),
         ...(params.useGoogleSearch !== undefined && { useGoogleSearch: params.useGoogleSearch }),

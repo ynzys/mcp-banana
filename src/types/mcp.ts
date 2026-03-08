@@ -90,6 +90,8 @@ export interface GenerateImageParams {
   quality?: ImageQuality
   /** Return generated image as base64 data in the response (default: false). Image is always saved to disk regardless */
   returnBase64?: boolean
+  /** Multiple input images for multi-image composition (optional). Cannot be used with inputImage/inputImagePath */
+  inputImages?: Array<{ data: string; mimeType: string }>
 }
 
 /**

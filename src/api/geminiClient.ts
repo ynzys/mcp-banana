@@ -149,6 +149,7 @@ export interface GeminiApiParams {
   prompt: string
   inputImage?: string
   inputImageMimeType?: string
+  inputImages?: Array<{ data: string; mimeType: string }>
   aspectRatio?: string
   imageSize?: string
   useGoogleSearch?: boolean
@@ -189,7 +190,18 @@ class GeminiClientImpl implements GeminiClient {
       const requestContent: unknown[] = []
 
       // Structure the contents properly for image generation/editing
-      if (params.inputImage) {
+      // Priority: inputImages > inputImage > text-only
+      if (params.inputImages && params.inputImages.length > 0) {
+        // For multi-image: multiple inlineData parts + text
+        const parts: unknown[] = params.inputImages.map((img) => ({
+          inlineData: {
+            data: img.data,
+            mimeType: img.mimeType,
+          },
+        }))
+        parts.push({ text: params.prompt })
+        requestContent.push({ parts })
+      } else if (params.inputImage) {
         // For image editing: provide image first, then text instructions
         requestContent.push({
           parts: [
@@ -413,7 +425,7 @@ class GeminiClientImpl implements GeminiClient {
         prompt: params.prompt,
         mimeType,
         timestamp: new Date(),
-        inputImageProvided: !!params.inputImage,
+        inputImageProvided: !!params.inputImage || !!(params.inputImages && params.inputImages.length > 0),
         ...(responseData.modelVersion && { modelVersion: responseData.modelVersion }),
         ...(responseData.responseId && { responseId: responseData.responseId }),
       }

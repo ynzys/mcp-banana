@@ -127,6 +127,40 @@ export function validateBase64Image(
 }
 
 /**
+ * Validates an array of base64 encoded images
+ * @param images - Array of image objects with data and mimeType
+ * @returns Result with success or error
+ */
+export function validateBase64Images(
+  images: Array<{ data: string; mimeType: string }>
+): Result<void, InputValidationError> {
+  if (images.length === 0) {
+    return Err(
+      new InputValidationError(
+        'inputImages array must not be empty',
+        'Provide at least one image in the inputImages array'
+      )
+    )
+  }
+
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i]
+    if (!img) continue
+    const result = validateBase64Image(img.data, img.mimeType)
+    if (!result.success) {
+      return Err(
+        new InputValidationError(
+          `inputImages[${i}]: ${result.error.message}`,
+          result.error.suggestion
+        )
+      )
+    }
+  }
+
+  return Ok(undefined)
+}
+
+/**
  * Validates input image path
  * @param imagePath - Path to the input image file
  * @returns Result with validated path or error
@@ -213,6 +247,24 @@ export function validateGenerateImageParams(
         'Use true or false for useWorldKnowledge parameter to enable/disable world knowledge integration'
       )
     )
+  }
+
+  // Validate mutual exclusivity: inputImages vs inputImage/inputImagePath
+  if (params.inputImages && (params.inputImage || params.inputImagePath)) {
+    return Err(
+      new InputValidationError(
+        'inputImages cannot be used together with inputImage or inputImagePath',
+        'Use either inputImages for multiple images, or inputImage/inputImagePath for a single image'
+      )
+    )
+  }
+
+  // Validate inputImages array if provided
+  if (params.inputImages) {
+    const imagesResult = validateBase64Images(params.inputImages)
+    if (!imagesResult.success) {
+      return Err(imagesResult.error)
+    }
   }
 
   // Validate input image data if provided

@@ -1,12 +1,12 @@
 {
-  "name": "mcp-image",
-  "mcpName": "io.github.shinpr/mcp-image",
-  "version": "0.8.0",
-  "description": "MCP server for AI image generation",
+  "name": "@ynzys/mcp-banana",
+  "mcpName": "io.github.ynzys/mcp-banana",
+  "version": "1.0.0",
+  "description": "MCP server for AI image generation with multi-image support",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-image": "./dist/index.js"
+    "mcp-banana": "./dist/index.js"
   },
   "keywords": [
     "mcp",
@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shinpr/mcp-image.git"
+    "url": "https://github.com/ynzys/mcp-banana.git"
   },
   "files": [
     "dist/**/*",
