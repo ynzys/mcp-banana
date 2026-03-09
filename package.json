@@ -1,6 +1,5 @@
 {
   "name": "mcp-hydrocoder-image",
-  "mcpName": "io.github.ynzys/mcp-hydrocoder-image",
   "version": "1.0.0",
   "description": "MCP server for AI image generation with multi-image support",
   "type": "module",
