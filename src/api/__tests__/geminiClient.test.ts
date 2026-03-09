@@ -36,29 +36,47 @@ describe('geminiClient', () => {
   })
 
   describe('createGeminiClient', () => {
-    it('should create client with correct model configuration', () => {
-      // Act
-      const result = createGeminiClient(testConfig)
-
-      // Assert
-      expect(result.success).toBe(true)
-      expect(mockGoogleGenAI).toHaveBeenCalledWith({ apiKey: testConfig.geminiApiKey })
-    })
-
-    it('should return error when API key is invalid', () => {
-      // Arrange
-      mockGoogleGenAI.mockImplementationOnce(() => {
-        throw new Error('Invalid API key')
+    it('should create client with correct model configuration', async () => {
+      // Arrange: mock a successful generateContent response
+      mockGeminiClientInstance.models.generateContent = vi.fn().mockResolvedValue({
+        response: {
+          candidates: [
+            { content: { parts: [{ inlineData: { data: 'test', mimeType: 'image/png' } }] } },
+          ],
+        },
       })
 
       // Act
       const result = createGeminiClient(testConfig)
 
-      // Assert
+      // Assert: client creation succeeds
+      expect(result.success).toBe(true)
+
+      // GoogleGenAI constructor is called lazily on first generateImage call
+      if (result.success) {
+        await result.data.generateImage({ prompt: 'test' })
+        expect(mockGoogleGenAI).toHaveBeenCalledWith({ apiKey: testConfig.geminiApiKey })
+      }
+    })
+
+    it('should return error when API key is invalid', async () => {
+      // Arrange: constructor will throw on first use
+      mockGoogleGenAI.mockImplementationOnce(() => {
+        throw new Error('Invalid API key')
+      })
+
+      // Act: createGeminiClient succeeds (lazy init), but generateImage fails
+      const clientResult = createGeminiClient(testConfig)
+      expect(clientResult.success).toBe(true)
+
+      if (!clientResult.success) return
+
+      const result = await clientResult.data.generateImage({ prompt: 'test' })
+
+      // Assert: error surfaces during generateImage (lazy initialization)
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error).toBeInstanceOf(GeminiAPIError)
-        expect(result.error.message).toContain('Failed to initialize Gemini client')
       }
     })
   })

@@ -196,7 +196,7 @@ describe('MCP Server', () => {
     // Assert: Verify that generate_image tool is registered
     expect(toolsList.tools).toHaveLength(1)
     expect(toolsList.tools[0].name).toBe('generate_image')
-    expect(toolsList.tools[0].description).toContain('Generate image with specified prompt')
+    expect(toolsList.tools[0].description).toContain('Generate, edit, blend, or merge')
     expect(toolsList.tools[0].inputSchema).toBeDefined()
 
     // Verify basic schema structure

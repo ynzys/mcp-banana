@@ -9,6 +9,7 @@ import type { Result } from '../types/result.js'
 import { Err, Ok } from '../types/result.js'
 import type { Config } from '../utils/config.js'
 import { GeminiAPIError, NetworkError } from '../utils/errors.js'
+import { createProxyFetch } from '../utils/proxyFetch.js'
 
 /**
  * Options for text generation
@@ -96,12 +97,25 @@ interface GeminiAIInstance {
  */
 class GeminiTextClientImpl implements GeminiTextClient {
   private readonly modelName = 'gemini-2.5-flash'
-  private readonly genai: GeminiAIInstance
+  private genai: GeminiAIInstance | null = null
+  private readonly config: Config
 
   constructor(config: Config) {
-    this.genai = new GoogleGenAI({
-      apiKey: config.geminiApiKey,
-    }) as unknown as GeminiAIInstance
+    this.config = config
+  }
+
+  private async getGenai(): Promise<GeminiAIInstance> {
+    if (!this.genai) {
+      const proxyFetch = await createProxyFetch()
+      const options: { apiKey: string; fetch?: typeof fetch } = {
+        apiKey: this.config.geminiApiKey,
+      }
+      if (proxyFetch) {
+        options.fetch = proxyFetch
+      }
+      this.genai = new GoogleGenAI(options) as unknown as GeminiAIInstance
+    }
+    return this.genai
   }
 
   async generateText(
@@ -170,7 +184,8 @@ class GeminiTextClientImpl implements GeminiTextClient {
       }
 
       // Call Gemini API
-      const apiCall = this.genai.models.generateContent({
+      const genai = await this.getGenai()
+      const apiCall = genai.models.generateContent({
         model: this.modelName,
         contents,
         config: {
@@ -217,7 +232,8 @@ class GeminiTextClientImpl implements GeminiTextClient {
   async validateConnection(): Promise<Result<boolean, GeminiAPIError | NetworkError>> {
     try {
       // Validate by checking if the models object exists
-      if (!this.genai.models) {
+      const genai = await this.getGenai()
+      if (!genai.models) {
         return Err(
           new GeminiAPIError(
             'Failed to access Gemini models',
