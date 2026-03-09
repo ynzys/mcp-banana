@@ -94,6 +94,8 @@ export interface GenerateImageParams {
   inputImages?: Array<{ data: string; mimeType: string }>
   /** Multiple input image file paths for multi-image composition (optional). Cannot be used with other image input params */
   inputImagePaths?: string[]
+  /** Skip prompt enhancement and use the prompt as-is (default: false). Useful for multi-image blending where enhancement may overwrite intent */
+  skipPromptEnhancement?: boolean
 }
 
 /**

@@ -82,7 +82,8 @@ export class MCPServerImpl {
       tools: [
         {
           name: 'generate_image',
-          description: 'Generate image with specified prompt and optional parameters',
+          description:
+            'Generate, edit, blend, or merge images using AI. Supports text-to-image generation, single image editing, and multi-image composition/blending. Use inputImagePaths for merging multiple images from file paths, or inputImages for base64 encoded images.',
           inputSchema: {
             type: 'object' as const,
             properties: {
@@ -215,6 +216,11 @@ export class MCPServerImpl {
                   'Quality preset controlling speed/fidelity tradeoff. Only specify when the user explicitly requests a specific quality level; omit to use the server\'s configured default. "fast": best for drafts and rapid iteration. "balanced": better detail and coherence, moderate latency. "quality": highest fidelity, use for final deliverables where quality matters most.',
                 enum: ['fast', 'balanced', 'quality'],
               },
+              skipPromptEnhancement: {
+                type: 'boolean' as const,
+                description:
+                  'Skip prompt enhancement and use the prompt as-is. Enable when your prompt already contains exact instructions (e.g., multi-image blending) that should not be rewritten. Default: false',
+              },
             },
             required: ['prompt'],
           },
@@ -341,7 +347,9 @@ export class MCPServerImpl {
 
       // Generate structured prompt (unless skipped)
       let structuredPrompt = params.prompt
-      if (!configResult.data.skipPromptEnhancement && this.structuredPromptGenerator) {
+      const shouldSkipEnhancement =
+        params.skipPromptEnhancement ?? configResult.data.skipPromptEnhancement
+      if (!shouldSkipEnhancement && this.structuredPromptGenerator) {
         const features: FeatureFlags = {}
         if (params.maintainCharacterConsistency !== undefined) {
           features.maintainCharacterConsistency = params.maintainCharacterConsistency
@@ -376,7 +384,7 @@ export class MCPServerImpl {
             error: promptResult.error.message,
           })
         }
-      } else if (configResult.data.skipPromptEnhancement) {
+      } else if (shouldSkipEnhancement) {
         this.logger.info('mcp-server', 'Prompt enhancement skipped (SKIP_PROMPT_ENHANCEMENT=true)')
       }
 
@@ -401,7 +409,18 @@ export class MCPServerImpl {
       }
 
       // Save image file
-      const fileName = params.fileName || this.fileManager.generateFileName()
+      let fileName = params.fileName || this.fileManager.generateFileName()
+      // Auto-append extension if user-provided fileName has no extension
+      if (params.fileName && !path.extname(fileName)) {
+        const mimeToExt: Record<string, string> = {
+          'image/png': '.png',
+          'image/jpeg': '.jpg',
+          'image/webp': '.webp',
+          'image/gif': '.gif',
+          'image/bmp': '.bmp',
+        }
+        fileName += mimeToExt[generationResult.data.metadata.mimeType] || '.png'
+      }
       const outputPath = path.join(configResult.data.imageOutputDir, fileName)
 
       const sanitizedPath = this.securityManager.sanitizeFilePath(outputPath)

@@ -1,8 +1,8 @@
-# MCP Banana 🍌
+# MCP HydroCoder Image 🍌
 
 > AI image generation and editing MCP server for Cursor, Claude Code, Codex, and any MCP-compatible tool — powered by Nano Banana 2 and Nano Banana Pro (Google Gemini).
 
-[![npm version](https://badge.fury.io/js/@ynzys/mcp-banana.svg)](https://www.npmjs.com/package/@ynzys/mcp-banana)
+[![npm version](https://badge.fury.io/js/mcp-hydrocoder-image.svg)](https://www.npmjs.com/package/mcp-hydrocoder-image)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An MCP server that turns simple text prompts into high-quality images. Unlike a simple API wrapper, this server automatically enhances your prompt and configures sensible defaults for generation — you don't need to learn prompt engineering or tune settings. Just describe what you want.
@@ -60,20 +60,20 @@ Based on the **Subject-Context-Style** framework, covering prompt structure, vis
 ### Install
 
 ```bash
-npx @ynzys/mcp-banana skills install --path <target-directory>
+npx mcp-hydrocoder-image skills install --path <target-directory>
 ```
 
 The skill will be placed at `<path>/image-generation/SKILL.md`. Specify the skills directory for your AI tool:
 
 ```bash
 # Cursor
-npx @ynzys/mcp-banana skills install --path ~/.cursor/skills
+npx mcp-hydrocoder-image skills install --path ~/.cursor/skills
 
 # Codex
-npx @ynzys/mcp-banana skills install --path ~/.codex/skills
+npx mcp-hydrocoder-image skills install --path ~/.codex/skills
 
 # Claude Code
-npx @ynzys/mcp-banana skills install --path ~/.claude/skills
+npx mcp-hydrocoder-image skills install --path ~/.claude/skills
 ```
 
 ### When to Use the Skill vs the MCP Server
@@ -107,11 +107,11 @@ Get your API key from [Google AI Studio](https://aistudio.google.com/apikey)
 Add to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.mcp-banana]
+[mcp_servers.mcp-hydrocoder-image]
 command = "npx"
-args = ["-y", "@ynzys/mcp-banana"]
+args = ["-y", "mcp-hydrocoder-image"]
 
-[mcp_servers.mcp-banana.env]
+[mcp_servers.mcp-hydrocoder-image.env]
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 ```
@@ -126,9 +126,9 @@ Add to your Cursor settings:
 ```json
 {
   "mcpServers": {
-    "mcp-banana": {
+    "mcp-hydrocoder-image": {
       "command": "npx",
-      "args": ["-y", "@ynzys/mcp-banana"],
+      "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
@@ -142,9 +142,9 @@ Add to your Cursor settings:
 ```json
 {
   "mcpServers": {
-    "mcp-banana": {
-      "command": "cmd",
-      "args": ["/c", "npx -y @ynzys/mcp-banana"],
+    "mcp-hydrocoder-image": {
+      "command": "npx",
+      "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
@@ -160,13 +160,13 @@ Run in your project directory to enable for that project:
 
 ```bash
 cd /path/to/your/project
-claude mcp add mcp-banana --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
+claude mcp add mcp-hydrocoder-image --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-hydrocoder-image
 ```
 
 Or add globally for all projects:
 
 ```bash
-claude mcp add mcp-banana --scope user --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
+claude mcp add mcp-hydrocoder-image --scope user --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-hydrocoder-image
 ```
 
 Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for project):
@@ -175,9 +175,9 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
 ```json
 {
   "mcpServers": {
-    "mcp-banana": {
+    "mcp-hydrocoder-image": {
       "command": "npx",
-      "args": ["-y", "@ynzys/mcp-banana"],
+      "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
@@ -191,9 +191,9 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
 ```json
 {
   "mcpServers": {
-    "mcp-banana": {
-      "command": "cmd",
-      "args": ["/c", "npx -y @ynzys/mcp-banana"],
+    "mcp-hydrocoder-image": {
+      "command": "npx",
+      "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
@@ -232,7 +232,7 @@ To override per-request, just tell your AI assistant (e.g., "generate in high qu
 
 **Codex:**
 ```toml
-[mcp_servers.mcp-banana.env]
+[mcp_servers.mcp-hydrocoder-image.env]
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_QUALITY = "balanced"
 ```
@@ -242,12 +242,21 @@ Add `"IMAGE_QUALITY": "balanced"` to the env section in your config.
 
 **Claude Code:**
 ```bash
-claude mcp add mcp-banana --env GEMINI_API_KEY=your-api-key --env IMAGE_QUALITY=balanced --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y @ynzys/mcp-banana
+claude mcp add mcp-hydrocoder-image --env GEMINI_API_KEY=your-api-key --env IMAGE_QUALITY=balanced --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-hydrocoder-image
 ```
 
 ### Skip Prompt Enhancement
 
-Set `SKIP_PROMPT_ENHANCEMENT=true` to disable automatic prompt optimization and send your prompts directly to the image generator. Useful when you need full control over the exact prompt wording.
+Control prompt enhancement via the `skipPromptEnhancement` tool parameter or the `SKIP_PROMPT_ENHANCEMENT` environment variable. **Parameter takes priority over environment variable.**
+
+| Parameter | Env Variable | Result |
+|-----------|-------------|--------|
+| Not set | Not set | Enhancement enabled (default) |
+| Not set | `true` | Enhancement skipped |
+| `true` | Any | Enhancement skipped |
+| `false` | `true` | Enhancement enabled (parameter overrides) |
+
+Skipping enhancement is recommended for multi-image blending, where the prompt enhancer may rewrite your blending intent into unrelated content.
 
 ## Usage Examples
 
@@ -382,7 +391,7 @@ If you want to test a local build (e.g., after cloning the repo or making change
 ### 1. Build the Project
 
 ```bash
-cd /path/to/mcp-banana
+cd /path/to/mcp-hydrocoder-image
 npm install
 npm run build
 ```
@@ -399,9 +408,9 @@ Add the following to your MCP configuration file, pointing directly to the local
 
 ```json
 {
-  "mcp-banana": {
+  "mcp-hydrocoder-image": {
     "command": "node",
-    "args": ["/absolute/path/to/mcp-banana/dist/index.js"],
+    "args": ["/absolute/path/to/mcp-hydrocoder-image/dist/index.js"],
     "env": {
       "GEMINI_API_KEY": "your_gemini_api_key_here",
       "IMAGE_OUTPUT_DIR": "/absolute/path/to/output"
@@ -420,7 +429,7 @@ To skip the permission prompt on every call, add the tool to your allow list in 
 {
   "permissions": {
     "allow": [
-      "mcp__mcp-banana__generate_image"
+      "mcp__mcp-hydrocoder-image__generate_image"
     ]
   }
 }
@@ -442,4 +451,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Need help?** [Open an issue](https://github.com/ynzys/mcp-banana/issues) or check the [troubleshooting section](#troubleshooting) above.
+**Need help?** [Open an issue](https://github.com/ynzys/mcp-hydrocoder-image/issues) or check the [troubleshooting section](#troubleshooting) above.

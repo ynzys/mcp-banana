@@ -1,12 +1,12 @@
 {
-  "name": "@ynzys/mcp-banana",
-  "mcpName": "io.github.ynzys/mcp-banana",
-  "version": "1.0.1",
+  "name": "mcp-hydrocoder-image",
+  "mcpName": "io.github.ynzys/mcp-hydrocoder-image",
+  "version": "1.0.0",
   "description": "MCP server for AI image generation with multi-image support",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-banana": "./dist/index.js"
+    "mcp-hydrocoder-image": "./dist/index.js"
   },
   "keywords": [
     "mcp",
