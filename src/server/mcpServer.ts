@@ -144,6 +144,15 @@ export class MCPServerImpl {
                   required: ['data', 'mimeType'],
                 },
               },
+              inputImagePaths: {
+                type: 'array' as const,
+                description:
+                  'Multiple input image file paths for multi-image composition. Cannot be used together with inputImage, inputImagePath, or inputImages. Each path must be absolute.',
+                items: {
+                  type: 'string' as const,
+                  description: 'Absolute path to an image file',
+                },
+              },
               returnBase64: {
                 type: 'boolean' as const,
                 description:
@@ -290,7 +299,29 @@ export class MCPServerImpl {
       let inputImageData: string | undefined
       let inputImageMimeType: string | undefined
       let inputImagesData: Array<{ data: string; mimeType: string }> | undefined
-      if (params.inputImages && params.inputImages.length > 0) {
+      if (params.inputImagePaths && params.inputImagePaths.length > 0) {
+        // Multi-image from file paths: read each file and derive mimeType from extension
+        const extToMime: Record<string, string> = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.webp': 'image/webp',
+          '.gif': 'image/gif',
+          '.bmp': 'image/bmp',
+        }
+        inputImagesData = await Promise.all(
+          params.inputImagePaths.map(async (filePath) => {
+            const buffer = await fs.readFile(filePath)
+            const ext = path.extname(filePath).toLowerCase()
+            return {
+              data: buffer.toString('base64'),
+              mimeType: extToMime[ext] || 'image/jpeg',
+            }
+          })
+        )
+        inputImageData = inputImagesData[0]?.data
+        inputImageMimeType = inputImagesData[0]?.mimeType
+      } else if (params.inputImages && params.inputImages.length > 0) {
         // Multi-image: strip data URI prefix from each image
         inputImagesData = params.inputImages.map((img) => ({
           data: img.data.replace(/^data:image\/[a-z]+;base64,/, ''),

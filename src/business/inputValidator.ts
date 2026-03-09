@@ -161,6 +161,38 @@ export function validateBase64Images(
 }
 
 /**
+ * Validates an array of input image paths
+ * @param paths - Array of image file paths
+ * @returns Result with success or error
+ */
+export function validateImagePaths(
+  paths: string[]
+): Result<void, InputValidationError> {
+  if (paths.length === 0) {
+    return Err(
+      new InputValidationError(
+        'inputImagePaths array must not be empty',
+        'Provide at least one file path in the inputImagePaths array'
+      )
+    )
+  }
+
+  for (let i = 0; i < paths.length; i++) {
+    const result = validateImagePath(paths[i])
+    if (!result.success) {
+      return Err(
+        new InputValidationError(
+          `inputImagePaths[${i}]: ${result.error.message}`,
+          result.error.suggestion
+        )
+      )
+    }
+  }
+
+  return Ok(undefined)
+}
+
+/**
  * Validates input image path
  * @param imagePath - Path to the input image file
  * @returns Result with validated path or error
@@ -249,12 +281,18 @@ export function validateGenerateImageParams(
     )
   }
 
-  // Validate mutual exclusivity: inputImages vs inputImage/inputImagePath
-  if (params.inputImages && (params.inputImage || params.inputImagePath)) {
+  // Validate mutual exclusivity of image input methods
+  const imageInputCount = [
+    params.inputImagePath,
+    params.inputImage,
+    params.inputImages,
+    params.inputImagePaths,
+  ].filter(Boolean).length
+  if (imageInputCount > 1) {
     return Err(
       new InputValidationError(
-        'inputImages cannot be used together with inputImage or inputImagePath',
-        'Use either inputImages for multiple images, or inputImage/inputImagePath for a single image'
+        'Only one image input method can be used at a time: inputImagePath, inputImage, inputImages, or inputImagePaths',
+        'Choose one: inputImagePath (single file), inputImage (single base64), inputImagePaths (multiple files), or inputImages (multiple base64)'
       )
     )
   }
@@ -264,6 +302,14 @@ export function validateGenerateImageParams(
     const imagesResult = validateBase64Images(params.inputImages)
     if (!imagesResult.success) {
       return Err(imagesResult.error)
+    }
+  }
+
+  // Validate inputImagePaths array if provided
+  if (params.inputImagePaths) {
+    const pathsResult = validateImagePaths(params.inputImagePaths)
+    if (!pathsResult.success) {
+      return Err(pathsResult.error)
     }
   }
 

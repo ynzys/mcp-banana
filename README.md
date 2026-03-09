@@ -144,7 +144,7 @@ Add to your Cursor settings:
   "mcpServers": {
     "mcp-banana": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@ynzys/mcp-banana"],
+      "args": ["/c", "npx -y @ynzys/mcp-banana"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
@@ -193,7 +193,7 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
   "mcpServers": {
     "mcp-banana": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@ynzys/mcp-banana"],
+      "args": ["/c", "npx -y @ynzys/mcp-banana"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
@@ -374,6 +374,67 @@ The server uses a two-stage process with separate models for each stage:
 - Check current pricing and rate limits at [Google AI Studio](https://aistudio.google.com/)
 - Monitor your API usage to avoid unexpected charges
 - The prompt optimization step adds minimal cost while significantly improving output quality
+
+## Local Development
+
+If you want to test a local build (e.g., after cloning the repo or making changes), follow these steps instead of using `npx`.
+
+### 1. Build the Project
+
+```bash
+cd /path/to/mcp-banana
+npm install
+npm run build
+```
+
+### 2. Configure the MCP Server
+
+Add the following to your MCP configuration file, pointing directly to the local `dist/index.js`:
+
+- **Claude Code**: `~/.claude.json`
+- **Cursor**: `~/.cursor/mcp.json` or `.cursor/mcp.json`
+- **Codex**: `~/.codex/config.toml`
+
+**Claude Code / Cursor (JSON):**
+
+```json
+{
+  "mcp-banana": {
+    "command": "node",
+    "args": ["/absolute/path/to/mcp-banana/dist/index.js"],
+    "env": {
+      "GEMINI_API_KEY": "your_gemini_api_key_here",
+      "IMAGE_OUTPUT_DIR": "/absolute/path/to/output"
+    }
+  }
+}
+```
+
+> **Proxy users**: If you need a proxy, add `HTTPS_PROXY` and `HTTP_PROXY` to the `env` section.
+
+### 3. Allow Tool Permissions (Claude Code)
+
+To skip the permission prompt on every call, add the tool to your allow list in `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__mcp-banana__generate_image"
+    ]
+  }
+}
+```
+
+### 4. Restart and Test
+
+Restart your AI tool to load the new MCP server, then try:
+
+```
+"Generate a serene mountain landscape at sunset"
+```
+
+If the image is saved to your `IMAGE_OUTPUT_DIR`, the local setup is working correctly.
 
 ## License
 
