@@ -314,9 +314,11 @@ The server uses a two-stage process with separate models for each stage:
 | `inputImagePath` | string | - | Absolute path to input image for image-to-image editing |
 | `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Alternative to `inputImagePath` |
 | `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Used with `inputImage` |
-| `inputImages` | array | - | Multiple input images for multi-image composition. Each item: `{ data: string, mimeType: string }`. Cannot be used with `inputImage`/`inputImagePath` |
+| `inputImages` | array | - | Multiple input images for multi-image composition. Each item: `{ data: string, mimeType: string }`. Cannot be used with `inputImage`/`inputImagePath`/`inputImagePaths` |
+| `inputImagePaths` | array | - | Multiple input image file paths for multi-image composition. Each item is an absolute path string. Cannot be used with other image input params |
 | `returnBase64` | boolean | - | Return the generated image as base64 data in the response. Image is always saved to disk regardless |
-| `fileName` | string | - | Custom filename for output (auto-generated if not specified) |
+| `fileName` | string | - | Custom filename for output (auto-generated if not specified). Extension is auto-appended based on output format if omitted |
+| `skipPromptEnhancement` | boolean | - | Skip prompt enhancement and use the prompt as-is. Recommended for multi-image blending. Overrides `SKIP_PROMPT_ENHANCEMENT` env var. Default: `false` |
 | `aspectRatio` | string | - | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, `1:4`, `1:8`, `4:1`, `8:1` |
 | `imageSize` | string | - | `1K`, `2K`, `4K`. Leave unspecified for standard quality |
 | `blendImages` | boolean | - | Enable multi-image blending for combining multiple visual elements naturally |
