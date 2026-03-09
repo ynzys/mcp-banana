@@ -9,7 +9,7 @@ import type { Result } from '../types/result.js'
 import { Err, Ok } from '../types/result.js'
 import type { Config } from '../utils/config.js'
 import { GeminiAPIError, NetworkError } from '../utils/errors.js'
-import { createProxyFetch } from '../utils/proxyFetch.js'
+import { applyProxyFetch } from '../utils/proxyFetch.js'
 
 /**
  * Options for text generation
@@ -106,14 +106,8 @@ class GeminiTextClientImpl implements GeminiTextClient {
 
   private async getGenai(): Promise<GeminiAIInstance> {
     if (!this.genai) {
-      const proxyFetch = await createProxyFetch()
-      const options: { apiKey: string; fetch?: typeof fetch } = {
-        apiKey: this.config.geminiApiKey,
-      }
-      if (proxyFetch) {
-        options.fetch = proxyFetch
-      }
-      this.genai = new GoogleGenAI(options) as unknown as GeminiAIInstance
+      await applyProxyFetch()
+      this.genai = new GoogleGenAI({ apiKey: this.config.geminiApiKey }) as unknown as GeminiAIInstance
     }
     return this.genai
   }

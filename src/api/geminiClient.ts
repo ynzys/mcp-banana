@@ -11,7 +11,7 @@ import type { Result } from '../types/result.js'
 import { Err, Ok } from '../types/result.js'
 import type { Config } from '../utils/config.js'
 import { GeminiAPIError, NetworkError } from '../utils/errors.js'
-import { createProxyFetch } from '../utils/proxyFetch.js'
+import { applyProxyFetch } from '../utils/proxyFetch.js'
 
 /**
  * Simplified Gemini API response types
@@ -528,17 +528,9 @@ class GeminiClientImpl implements GeminiClient {
  */
 export function createGeminiClient(config: Config): Result<GeminiClient, GeminiAPIError> {
   try {
-    const proxyFetchPromise = createProxyFetch()
-
     const createClient = async () => {
-      const proxyFetch = await proxyFetchPromise
-      const genaiOptions: { apiKey: string; fetch?: typeof fetch } = {
-        apiKey: config.geminiApiKey,
-      }
-      if (proxyFetch) {
-        genaiOptions.fetch = proxyFetch
-      }
-      return new GoogleGenAI(genaiOptions) as unknown as GeminiClientInstance
+      await applyProxyFetch()
+      return new GoogleGenAI({ apiKey: config.geminiApiKey }) as unknown as GeminiClientInstance
     }
 
     // Create client synchronously with lazy proxy initialization
