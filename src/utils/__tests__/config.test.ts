@@ -178,7 +178,7 @@ describe('config', () => {
       if (result.success) {
         expect(result.data.geminiApiKey).toBe('test-api-key-12345')
         expect(result.data.imageOutputDir).toBe('/custom/output')
-        expect(result.data.apiTimeout).toBe(30000) // Default timeout
+        expect(result.data.apiTimeout).toBe(120000) // Default timeout
       }
     })
 
@@ -195,7 +195,7 @@ describe('config', () => {
       if (result.success) {
         expect(result.data.geminiApiKey).toBe('test-api-key-12345')
         expect(result.data.imageOutputDir).toBe('./output') // Default value
-        expect(result.data.apiTimeout).toBe(30000)
+        expect(result.data.apiTimeout).toBe(120000)
       }
     })
 
@@ -285,6 +285,36 @@ describe('config', () => {
       expect(result.success).toBe(true)
       if (result.success) {
         expect(result.data.geminiApiBaseUrl).toBeUndefined()
+      }
+    })
+
+    it('should load API_TIMEOUT when set', () => {
+      // Arrange
+      process.env.GEMINI_API_KEY = 'test-api-key-12345'
+      process.env.API_TIMEOUT = '180000'
+
+      // Act
+      const result = getConfig()
+
+      // Assert
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.apiTimeout).toBe(180000)
+      }
+    })
+
+    it('should use default API_TIMEOUT (120s) when not provided', () => {
+      // Arrange
+      process.env.GEMINI_API_KEY = 'test-api-key-12345'
+      process.env.API_TIMEOUT = undefined
+
+      // Act
+      const result = getConfig()
+
+      // Assert
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.apiTimeout).toBe(120000)
       }
     })
   })

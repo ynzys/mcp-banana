@@ -114,6 +114,7 @@ args = ["-y", "mcp-hydrocoder-image"]
 [mcp_servers.mcp-hydrocoder-image.env]
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
+API_TIMEOUT = "120000"  # Optional: timeout in milliseconds (default: 120s)
 ```
 
 #### For Cursor
@@ -131,7 +132,8 @@ Add to your Cursor settings:
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
-        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
+        "API_TIMEOUT": "120000"
       }
     }
   }
@@ -147,7 +149,8 @@ Add to your Cursor settings:
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
-        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
+        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
+        "API_TIMEOUT": "120000"
       }
     }
   }
@@ -160,13 +163,21 @@ Run in your project directory to enable for that project:
 
 ```bash
 cd /path/to/your/project
-claude mcp add mcp-hydrocoder-image --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-hydrocoder-image
+claude mcp add mcp-hydrocoder-image \
+  --env GEMINI_API_KEY=your-api-key \
+  --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
+  --env API_TIMEOUT=120000 \
+  -- npx -y mcp-hydrocoder-image
 ```
 
 Or add globally for all projects:
 
 ```bash
-claude mcp add mcp-hydrocoder-image --scope user --env GEMINI_API_KEY=your-api-key --env IMAGE_OUTPUT_DIR=/absolute/path/to/images -- npx -y mcp-hydrocoder-image
+claude mcp add mcp-hydrocoder-image --scope user \
+  --env GEMINI_API_KEY=your-api-key \
+  --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
+  --env API_TIMEOUT=120000 \
+  -- npx -y mcp-hydrocoder-image
 ```
 
 Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for project):
@@ -180,7 +191,8 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
-        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
+        "API_TIMEOUT": "120000"
       }
     }
   }
@@ -196,7 +208,8 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
         "GEMINI_API_KEY": "your_gemini_api_key_here",
-        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images"
+        "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
+        "API_TIMEOUT": "120000"
       }
     }
   }

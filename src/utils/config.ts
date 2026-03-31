@@ -26,7 +26,7 @@ export interface Config {
  */
 const DEFAULT_CONFIG = {
   imageOutputDir: './output',
-  apiTimeout: 30000, // 30 seconds
+  apiTimeout: 120000, // 120 seconds (default for multi-image synthesis)
 } as const
 
 /**
@@ -95,7 +95,7 @@ export function getConfig(): Result<Config, ConfigError> {
   const config: Config = {
     geminiApiKey: process.env['GEMINI_API_KEY'] || '',
     imageOutputDir: process.env['IMAGE_OUTPUT_DIR'] || DEFAULT_CONFIG.imageOutputDir,
-    apiTimeout: DEFAULT_CONFIG.apiTimeout,
+    apiTimeout: parseInt(process.env['API_TIMEOUT'] || String(DEFAULT_CONFIG.apiTimeout), 10),
     skipPromptEnhancement: process.env['SKIP_PROMPT_ENHANCEMENT'] === 'true',
     imageQuality: (process.env['IMAGE_QUALITY'] || 'fast') as ImageQuality,
     ...(process.env['GEMINI_API_BASE_URL'] && { geminiApiBaseUrl: process.env['GEMINI_API_BASE_URL'] }),
