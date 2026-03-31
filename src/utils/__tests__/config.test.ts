@@ -257,5 +257,35 @@ describe('config', () => {
         expect(result.error.message).toContain('at least 10 characters')
       }
     })
+
+    it('should load GEMINI_API_BASE_URL when set', () => {
+      // Arrange
+      process.env.GEMINI_API_KEY = 'test-api-key-12345'
+      process.env.GEMINI_API_BASE_URL = 'https://custom-api.example.com'
+
+      // Act
+      const result = getConfig()
+
+      // Assert
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.geminiApiBaseUrl).toBe('https://custom-api.example.com')
+      }
+    })
+
+    it('should not set GEMINI_API_BASE_URL when not provided', () => {
+      // Arrange
+      process.env.GEMINI_API_KEY = 'test-api-key-12345'
+      process.env.GEMINI_API_BASE_URL = undefined
+
+      // Act
+      const result = getConfig()
+
+      // Assert
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.geminiApiBaseUrl).toBeUndefined()
+      }
+    })
   })
 })

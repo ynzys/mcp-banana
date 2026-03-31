@@ -18,6 +18,7 @@ export interface Config {
   apiTimeout: number
   skipPromptEnhancement: boolean // Skip prompt enhancement for direct control
   imageQuality: ImageQuality
+  geminiApiBaseUrl?: string // Optional custom API base URL
 }
 
 /**
@@ -97,6 +98,7 @@ export function getConfig(): Result<Config, ConfigError> {
     apiTimeout: DEFAULT_CONFIG.apiTimeout,
     skipPromptEnhancement: process.env['SKIP_PROMPT_ENHANCEMENT'] === 'true',
     imageQuality: (process.env['IMAGE_QUALITY'] || 'fast') as ImageQuality,
+    ...(process.env['GEMINI_API_BASE_URL'] && { geminiApiBaseUrl: process.env['GEMINI_API_BASE_URL'] }),
   }
 
   return validateConfig(config)

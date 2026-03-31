@@ -530,7 +530,20 @@ export function createGeminiClient(config: Config): Result<GeminiClient, GeminiA
   try {
     const createClient = async () => {
       await applyProxyFetch()
-      return new GoogleGenAI({ apiKey: config.geminiApiKey }) as unknown as GeminiClientInstance
+
+      // Build httpOptions with optional baseUrl
+      const httpOptions: { baseUrl?: string; timeout?: number } = {}
+      if (config.geminiApiBaseUrl) {
+        httpOptions.baseUrl = config.geminiApiBaseUrl
+      }
+      if (config.apiTimeout) {
+        httpOptions.timeout = config.apiTimeout
+      }
+
+      return new GoogleGenAI({
+        apiKey: config.geminiApiKey,
+        ...(Object.keys(httpOptions).length > 0 && { httpOptions })
+      }) as unknown as GeminiClientInstance
     }
 
     // Create client synchronously with lazy proxy initialization

@@ -210,6 +210,46 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
 - Defaults to `./output` in the current working directory if not specified
 - Directory will be created automatically if it doesn't exist
 
+#### Custom API Base URL (Third-party Proxy)
+
+To use a third-party API endpoint or proxy, add the `GEMINI_API_BASE_URL` environment variable:
+
+**Claude Code:**
+```bash
+claude mcp add mcp-hydrocoder-image \
+  --env GEMINI_API_KEY=your-api-key \
+  --env GEMINI_API_BASE_URL=https://your-api-proxy.com \
+  --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
+  -- npx -y mcp-hydrocoder-image
+```
+
+**Cursor / JSON config:**
+```json
+{
+  "mcpServers": {
+    "mcp-hydrocoder-image": {
+      "command": "npx",
+      "args": ["-y", "mcp-hydrocoder-image"],
+      "env": {
+        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "GEMINI_API_BASE_URL": "https://your-api-proxy.com",
+        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+      }
+    }
+  }
+}
+```
+
+**Codex (TOML):**
+```toml
+[mcp_servers.mcp-hydrocoder-image.env]
+GEMINI_API_KEY = "your_gemini_api_key_here"
+GEMINI_API_BASE_URL = "https://your-api-proxy.com"
+IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
+```
+
+> **Note**: The base URL should be the root domain (e.g., `https://llm.myseek.fun`), without the `/v1` suffix — the SDK will append the API version automatically.
+
 ## Quality Presets
 
 Choose the right balance of speed, quality, and cost:

@@ -55,7 +55,48 @@ describe('geminiClient', () => {
       // GoogleGenAI constructor is called lazily on first generateImage call
       if (result.success) {
         await result.data.generateImage({ prompt: 'test' })
-        expect(mockGoogleGenAI).toHaveBeenCalledWith({ apiKey: testConfig.geminiApiKey })
+        // Verify GoogleGenAI was called with apiKey and httpOptions (baseUrl may be undefined)
+        const callArgs = mockGoogleGenAI.mock.calls[0]?.[0]
+        expect(callArgs).toEqual({
+          apiKey: testConfig.geminiApiKey,
+          httpOptions: {
+            timeout: testConfig.apiTimeout,
+          },
+        })
+      }
+    })
+
+    it('should include baseUrl in httpOptions when GEMINI_API_BASE_URL is set', async () => {
+      // Arrange
+      const configWithBaseUrl: Config = {
+        ...testConfig,
+        geminiApiBaseUrl: 'https://custom-api.example.com',
+      }
+
+      mockGeminiClientInstance.models.generateContent = vi.fn().mockResolvedValue({
+        response: {
+          candidates: [
+            { content: { parts: [{ inlineData: { data: 'test', mimeType: 'image/png' } }] } },
+          ],
+        },
+      })
+
+      // Act
+      const result = createGeminiClient(configWithBaseUrl)
+
+      // Assert
+      expect(result.success).toBe(true)
+
+      if (result.success) {
+        await result.data.generateImage({ prompt: 'test' })
+        const callArgs = mockGoogleGenAI.mock.calls[0]?.[0]
+        expect(callArgs).toEqual({
+          apiKey: testConfig.geminiApiKey,
+          httpOptions: {
+            baseUrl: 'https://custom-api.example.com',
+            timeout: testConfig.apiTimeout,
+          },
+        })
       }
     })
 
