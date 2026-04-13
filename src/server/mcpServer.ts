@@ -69,7 +69,7 @@ export class MCPServerImpl {
         {
           name: 'generate_image',
           description:
-            'Generate, edit, blend, or merge images using AI. Supports Gemini and Volcengine Seedream providers, text-to-image generation, single image editing, and multi-image composition/blending.',
+            'Generate, edit, blend, or merge images using AI. When the user provides local image file paths, those paths must be passed through inputImagePath or inputImagePaths instead of being summarized by the model. Gemini handles prompt enhancement; Volcengine supports text-to-image and reference-image workflows through its OpenAI-compatible image API.',
           inputSchema: {
             type: 'object' as const,
             properties: {
@@ -91,12 +91,12 @@ export class MCPServerImpl {
               inputImagePath: {
                 type: 'string' as const,
                 description:
-                  'Optional absolute path to source image for image-to-image generation. Use when generating variations, style transfers, or similar images based on an existing image (must be an absolute path)',
+                  'Optional absolute path to a source image. If the user provides a local image path, pass it here directly instead of summarizing image contents in the prompt. Supported by Gemini and Volcengine reference-image workflows.',
               },
               inputImage: {
                 type: 'string' as const,
                 description:
-                  'Optional base64 encoded image data for image-to-image generation. Alternative to inputImagePath when image data is already in memory. Do not include data URI prefix (e.g., "data:image/png;base64,")',
+                  'Optional base64 encoded image data for image-to-image generation. Supported by Gemini; Volcengine support depends on provider-side image field compatibility.',
               },
               inputImageMimeType: {
                 type: 'string' as const,
@@ -107,7 +107,7 @@ export class MCPServerImpl {
               inputImages: {
                 type: 'array' as const,
                 description:
-                  'Multiple input images for multi-image composition. Cannot be used together with inputImage or inputImagePath. Each item requires base64 data and MIME type.',
+                  'Multiple input images for multi-image composition. Supported by Gemini and by Volcengine when mapped to reference-image arrays.',
                 items: {
                   type: 'object' as const,
                   properties: {
@@ -127,7 +127,7 @@ export class MCPServerImpl {
               inputImagePaths: {
                 type: 'array' as const,
                 description:
-                  'Multiple input image file paths for multi-image composition. Cannot be used together with inputImage, inputImagePath, or inputImages. Each path must be absolute.',
+                  'Multiple absolute local image paths for multi-image composition. If the user provides two or more local image paths, pass them here directly instead of summarizing the images in the prompt.',
                 items: {
                   type: 'string' as const,
                   description: 'Absolute path to an image file',
@@ -182,8 +182,13 @@ export class MCPServerImpl {
               },
               outputFormat: {
                 type: 'string' as const,
-                description: 'Output image format. Supported values: png, jpeg, webp.',
+                description: 'Output image format if supported by the provider. Some provider endpoints may ignore or reject format overrides.',
                 enum: ['png', 'jpeg', 'webp'],
+              },
+              outputCount: {
+                type: 'integer' as const,
+                description:
+                  'Best-effort number of output images to request when the provider supports grouped output. Use for requests like "4 images" or "4 variations". Currently wired for Volcengine, but final image count still depends on provider behavior.',
               },
               skipPromptEnhancement: {
                 type: 'boolean' as const,
@@ -406,41 +411,58 @@ export class MCPServerImpl {
         throw generationResult.error
       }
 
-      let fileName = params.fileName || this.fileManager.generateFileName()
-      if (params.fileName && !path.extname(fileName)) {
-        const mimeToExt: Record<string, string> = {
-          'image/png': '.png',
-          'image/jpeg': '.jpg',
-          'image/webp': '.webp',
-          'image/gif': '.gif',
-          'image/bmp': '.bmp',
+      const saveTargets = generationResult.data.images?.length
+        ? generationResult.data.images
+        : [{ imageData: generationResult.data.imageData, mimeType: generationResult.data.metadata.mimeType }]
+
+      const savedPaths: string[] = []
+      for (let index = 0; index < saveTargets.length; index++) {
+        const target = saveTargets[index]
+        if (!target) {
+          continue
         }
-        fileName += mimeToExt[generationResult.data.metadata.mimeType] || '.png'
-      }
-      const outputPath = path.join(configResult.data.imageOutputDir, fileName)
+        let currentFileName = params.fileName || this.fileManager.generateFileName()
+        if (params.fileName) {
+          const ext = path.extname(currentFileName)
+          const baseName = ext ? currentFileName.slice(0, -ext.length) : currentFileName
+          const finalExt = ext || ({
+            'image/png': '.png',
+            'image/jpeg': '.jpg',
+            'image/webp': '.webp',
+            'image/gif': '.gif',
+            'image/bmp': '.bmp',
+          }[target.mimeType] || '.png')
+          currentFileName = saveTargets.length > 1 ? `${baseName}-${index + 1}${finalExt}` : `${baseName}${finalExt}`
+        } else if (saveTargets.length > 1) {
+          const ext = path.extname(currentFileName)
+          const baseName = currentFileName.slice(0, -ext.length)
+          currentFileName = `${baseName}-${index + 1}${ext}`
+        }
 
-      const sanitizedPath = this.securityManager.sanitizeFilePath(outputPath)
-      if (!sanitizedPath.success) {
-        throw sanitizedPath.error
-      }
+        const outputPath = path.join(configResult.data.imageOutputDir, currentFileName)
+        const sanitizedPath = this.securityManager.sanitizeFilePath(outputPath)
+        if (!sanitizedPath.success) {
+          throw sanitizedPath.error
+        }
 
-      const saveResult = await this.fileManager.saveImage(
-        generationResult.data.imageData,
-        sanitizedPath.data
-      )
-      if (!saveResult.success) {
-        throw saveResult.error
+        const saveResult = await this.fileManager.saveImage(target.imageData, sanitizedPath.data)
+        if (!saveResult.success) {
+          throw saveResult.error
+        }
+        savedPaths.push(saveResult.data)
       }
 
       if (params.returnBase64) {
         const base64Data = generationResult.data.imageData.toString('base64')
         return this.responseBuilder.buildBase64SuccessResponse(
           generationResult.data,
-          saveResult.data,
+          savedPaths[0]!,
           base64Data
         )
       }
-      return this.responseBuilder.buildSuccessResponse(generationResult.data, saveResult.data)
+      return savedPaths.length > 1
+        ? this.responseBuilder.buildMultiSuccessResponse(generationResult.data, savedPaths)
+        : this.responseBuilder.buildSuccessResponse(generationResult.data, savedPaths[0]!)
     }, 'image-generation')
 
     if (result.ok) {

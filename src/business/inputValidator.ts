@@ -266,6 +266,23 @@ function validateProvider(provider?: ImageProvider): Result<ImageProvider | unde
   return Ok(provider)
 }
 
+function validateOutputCount(outputCount?: number): Result<number | undefined, InputValidationError> {
+  if (outputCount === undefined) {
+    return Ok(undefined)
+  }
+
+  if (!Number.isInteger(outputCount) || outputCount < 1 || outputCount > 15) {
+    return Err(
+      new InputValidationError(
+        `Invalid outputCount: ${outputCount}. Supported range: 1-15`,
+        'Please use an integer outputCount between 1 and 15'
+      )
+    )
+  }
+
+  return Ok(outputCount)
+}
+
 /**
  * Validates complete GenerateImageParams object
  */
@@ -280,6 +297,11 @@ export function validateGenerateImageParams(
   const outputFormatResult = validateOutputFormat(params.outputFormat)
   if (!outputFormatResult.success) {
     return Err(outputFormatResult.error)
+  }
+
+  const outputCountResult = validateOutputCount(params.outputCount)
+  if (!outputCountResult.success) {
+    return Err(outputCountResult.error)
   }
 
   // Validate prompt

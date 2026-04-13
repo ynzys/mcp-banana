@@ -115,8 +115,10 @@ export interface GenerateImageParams {
   purpose?: string
   /** Quality preset for image generation (default: "fast") */
   quality?: ImageQuality
-  /** Output image format. Defaults to provider-specific behavior, currently png for Volcengine. */
+  /** Output image format if supported by the provider. Some provider endpoints may ignore or reject format overrides. */
   outputFormat?: ImageOutputFormat
+  /** Number of output images to generate when the provider supports grouped output. Use for requests like 4 images, 4 variations, or grouped outputs. Currently implemented for Volcengine. */
+  outputCount?: number
   /** Return generated image as base64 data in the response (default: false). Image is always saved to disk regardless */
   returnBase64?: boolean
   /** Multiple input images as base64 for multi-image composition (optional). Cannot be used with other image input params */

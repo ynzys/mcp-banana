@@ -39,6 +39,10 @@ const DEFAULT_ERROR_SUGGESTION = 'Please try again or contact support if the pro
  */
 export interface ResponseBuilder {
   buildSuccessResponse(generationResult: GeneratedImageResult, filePath: string): McpToolResponse
+  buildMultiSuccessResponse(
+    generationResult: GeneratedImageResult,
+    filePaths: string[]
+  ): McpToolResponse
   buildBase64SuccessResponse(
     generationResult: GeneratedImageResult,
     filePath: string,
@@ -150,6 +154,36 @@ export function createResponseBuilder(): ResponseBuilder {
           {
             type: 'text',
             text: JSON.stringify(structuredContent),
+          },
+        ],
+        isError: false,
+      }
+    },
+
+    buildMultiSuccessResponse(
+      generationResult: GeneratedImageResult,
+      filePaths: string[]
+    ): McpToolResponse {
+      const files = filePaths.map((filePath) => ({
+        uri: `file://${filePath}`,
+        name: path.basename(filePath),
+        mimeType: getMimeTypeFromPath(filePath),
+      }))
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              type: 'multi_image_result',
+              files,
+              metadata: {
+                model: generationResult.metadata.model,
+                processingTime: 0,
+                contextMethod: 'structured_prompt',
+                timestamp: generationResult.metadata.timestamp.toISOString(),
+              },
+            }),
           },
         ],
         isError: false,

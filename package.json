@@ -63,6 +63,7 @@
   "dependencies": {
     "@google/genai": "^1.42.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "openai": "^6.34.0",
     "undici": "^7.22.0"
   },
   "devDependencies": {

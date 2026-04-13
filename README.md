@@ -277,7 +277,13 @@ IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 
 ### Volcengine Example
 
-To use Volcengine Seedream as the default backend, switch provider and set a Volcengine API key:
+To use Volcengine Seedream as the default backend, switch provider and set a Volcengine API key.
+
+Current implementation status for Volcengine in this repo:
+- Stable path: text-to-image
+- Reference-image workflows are wired through the OpenAI-compatible image API
+- Grouped output (`outputCount`) is best-effort and depends on provider-side behavior
+- When the user provides local image paths, they should be passed through `inputImagePath` / `inputImagePaths` instead of being summarized into the prompt
 
 **Claude Code:**
 ```bash
@@ -409,12 +415,13 @@ The server uses a two-stage process with separate models for each stage:
 | `prompt` | string | Yes | Text description or editing instruction |
 | `provider` | string | - | Optional provider override: `gemini` or `volcengine`. Defaults to `IMAGE_PROVIDER` |
 | `quality` | string | - | Quality preset: `fast` (default), `balanced`, `quality`. Overrides `IMAGE_QUALITY` env var for this request |
-| `outputFormat` | string | - | Output image format: `png`, `jpeg`, `webp`. Currently used by Volcengine provider |
-| `inputImagePath` | string | - | Absolute path to input image for image-to-image editing |
-| `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Alternative to `inputImagePath` |
+| `outputFormat` | string | - | Output image format if supported by the provider. Some provider endpoints may ignore or reject format overrides |
+| `outputCount` | integer | - | Best-effort number of output images to request when the provider supports grouped output. Currently wired for Volcengine, but final image count still depends on provider behavior |
+| `inputImagePath` | string | - | Absolute path to input image for image-to-image editing. Supported by Gemini and by Volcengine reference-image workflows |
+| `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Supported by Gemini; Volcengine support depends on provider-side image field compatibility |
 | `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Used with `inputImage` |
-| `inputImages` | array | - | Multiple input images for multi-image composition. Each item: `{ data: string, mimeType: string }`. Cannot be used with `inputImage`/`inputImagePath`/`inputImagePaths` |
-| `inputImagePaths` | array | - | Multiple input image file paths for multi-image composition. Each item is an absolute path string. Cannot be used with other image input params |
+| `inputImages` | array | - | Multiple input images for multi-image composition. Supported by Gemini and by Volcengine when mapped to reference-image arrays |
+| `inputImagePaths` | array | - | Multiple input image file paths for multi-image composition. Supported by Gemini and by Volcengine when mapped to reference-image arrays |
 | `returnBase64` | boolean | - | Return the generated image as base64 data in the response. Image is always saved to disk regardless |
 | `fileName` | string | - | Custom filename for output (auto-generated if not specified). Extension is auto-appended based on output format if omitted |
 | `skipPromptEnhancement` | boolean | - | Skip prompt enhancement and use the prompt as-is. Recommended for multi-image blending. Overrides `SKIP_PROMPT_ENHANCEMENT` env var. Default: `false` |

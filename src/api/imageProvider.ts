@@ -17,9 +17,15 @@ export interface GeneratedImageMetadata {
   modelVersion?: string
 }
 
+export interface GeneratedImageVariant {
+  imageData: Buffer
+  mimeType: string
+}
+
 export interface GeneratedImageResult {
   imageData: Buffer
   metadata: GeneratedImageMetadata
+  images?: GeneratedImageVariant[]
 }
 
 export interface ImageProviderClient {
