@@ -5,8 +5,8 @@
 
 import { existsSync } from 'node:fs'
 import { extname } from 'node:path'
-import type { AspectRatio, GenerateImageParams } from '../types/mcp.js'
-import { IMAGE_QUALITY_VALUES } from '../types/mcp.js'
+import type { AspectRatio, GenerateImageParams, ImageProvider, ImageOutputFormat } from '../types/mcp.js'
+import { IMAGE_OUTPUT_FORMAT_VALUES, IMAGE_PROVIDER_VALUES, IMAGE_QUALITY_VALUES } from '../types/mcp.js'
 import type { Result } from '../types/result.js'
 import { Err, Ok } from '../types/result.js'
 import { InputValidationError } from '../utils/errors.js'
@@ -230,12 +230,58 @@ export function validateImagePath(
   return Ok(imagePath)
 }
 
+function validateOutputFormat(
+  outputFormat?: ImageOutputFormat
+): Result<ImageOutputFormat | undefined, InputValidationError> {
+  if (!outputFormat) {
+    return Ok(undefined)
+  }
+
+  if (!IMAGE_OUTPUT_FORMAT_VALUES.includes(outputFormat)) {
+    return Err(
+      new InputValidationError(
+        `Invalid outputFormat: ${outputFormat}. Supported values: ${IMAGE_OUTPUT_FORMAT_VALUES.join(', ')}`,
+        `Please use one of the supported output formats: ${IMAGE_OUTPUT_FORMAT_VALUES.join(', ')}`
+      )
+    )
+  }
+
+  return Ok(outputFormat)
+}
+
+function validateProvider(provider?: ImageProvider): Result<ImageProvider | undefined, InputValidationError> {
+  if (!provider) {
+    return Ok(undefined)
+  }
+
+  if (!IMAGE_PROVIDER_VALUES.includes(provider)) {
+    return Err(
+      new InputValidationError(
+        `Invalid provider: ${provider}. Supported values: ${IMAGE_PROVIDER_VALUES.join(', ')}`,
+        `Please use one of the supported providers: ${IMAGE_PROVIDER_VALUES.join(', ')}`
+      )
+    )
+  }
+
+  return Ok(provider)
+}
+
 /**
  * Validates complete GenerateImageParams object
  */
 export function validateGenerateImageParams(
   params: GenerateImageParams
 ): Result<GenerateImageParams, InputValidationError> {
+  const providerResult = validateProvider(params.provider)
+  if (!providerResult.success) {
+    return Err(providerResult.error)
+  }
+
+  const outputFormatResult = validateOutputFormat(params.outputFormat)
+  if (!outputFormatResult.success) {
+    return Err(outputFormatResult.error)
+  }
+
   // Validate prompt
   const promptResult = validatePrompt(params.prompt)
   if (!promptResult.success) {

@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai'
-import type { ImageQuality } from '../types/mcp.js'
+import type { GeneratedImageMetadata, GeneratedImageResult, ImageProviderClient } from './imageProvider.js'
 import { GEMINI_MODELS } from '../types/mcp.js'
 import type { Result } from '../types/result.js'
 import { Err, Ok } from '../types/result.js'
@@ -50,6 +50,7 @@ interface GeminiClientInstance {
       config?: {
         imageConfig?: {
           aspectRatio?: string
+          imageSize?: string
         }
         responseModalities?: string[]
         thinkingConfig?: {
@@ -57,13 +58,10 @@ interface GeminiClientInstance {
         }
       }
       tools?: unknown[]
-    }): Promise<unknown> // Response is unknown, we'll validate with type guards
+    }): Promise<unknown>
   }
 }
 
-/**
- * Safely analyze response structure for debugging (removes sensitive data)
- */
 function analyzeResponseStructure(obj: unknown): Record<string, unknown> {
   if (!obj || typeof obj !== 'object') {
     return { type: typeof obj, value: obj }
@@ -75,10 +73,11 @@ function analyzeResponseStructure(obj: unknown): Record<string, unknown> {
     if (depth > 3) return '[max depth]'
 
     if (value === null || value === undefined) return value
-    if (typeof value !== 'object')
+    if (typeof value !== 'object') {
       return typeof value === 'string' && value.length > 100
         ? `[string length: ${value.length}]`
         : value
+    }
 
     if (seen.has(value)) return '[circular]'
     seen.add(value)
@@ -91,11 +90,9 @@ function analyzeResponseStructure(obj: unknown): Record<string, unknown> {
     const result: Record<string, unknown> = {}
 
     for (const [key, val] of Object.entries(record)) {
-      // Skip sensitive keys
       if (/apikey|token|secret|password|credential/i.test(key)) {
         result[key] = '[REDACTED]'
       } else if (key === 'data' && typeof val === 'string' && val.length > 100) {
-        // Likely base64 image data
         result[key] = `[base64 data, length: ${val.length}]`
       } else {
         result[key] = sanitize(val, depth + 1)
@@ -108,39 +105,20 @@ function analyzeResponseStructure(obj: unknown): Record<string, unknown> {
   return sanitize(obj) as Record<string, unknown>
 }
 
-/**
- * Type guard for Gemini response validation
- */
 function isGeminiResponse(obj: unknown): obj is GeminiResponse {
   if (!obj || typeof obj !== 'object') return false
   const response = obj as Record<string, unknown>
 
-  // Check if it has response property (wrapped response)
   if ('response' in response && response['response'] && typeof response['response'] === 'object') {
     const innerResponse = response['response'] as Record<string, unknown>
     return 'candidates' in innerResponse && Array.isArray(innerResponse['candidates'])
   }
 
-  // Check direct candidates property (direct response)
   return 'candidates' in response && Array.isArray(response['candidates'])
 }
 
 interface ErrorWithCode extends Error {
   code?: string
-}
-
-/**
- * Metadata for generated images
- */
-export interface GeminiGenerationMetadata {
-  model: string
-  prompt: string
-  mimeType: string
-  timestamp: Date
-  inputImageProvided: boolean
-  // Additional metadata from flat structure responses
-  modelVersion?: string
-  responseId?: string
 }
 
 /**
@@ -154,46 +132,28 @@ export interface GeminiApiParams {
   aspectRatio?: string
   imageSize?: string
   useGoogleSearch?: boolean
-  quality?: ImageQuality
+  quality?: 'fast' | 'balanced' | 'quality'
 }
 
-/**
- * Result of image generation
- */
-export interface GeneratedImageResult {
-  imageData: Buffer
-  metadata: GeminiGenerationMetadata
-}
-
-/**
- * Gemini API client interface
- */
-export interface GeminiClient {
+export interface GeminiClient extends ImageProviderClient {
   generateImage(
     params: GeminiApiParams
   ): Promise<Result<GeneratedImageResult, GeminiAPIError | NetworkError>>
 }
 
-/**
- * Implementation of Gemini API client
- */
 class GeminiClientImpl implements GeminiClient {
   constructor(
     private readonly genai: GeminiClientInstance,
-    private readonly defaultQuality: ImageQuality = 'fast'
+    private readonly defaultQuality: 'fast' | 'balanced' | 'quality' = 'fast'
   ) {}
 
   async generateImage(
     params: GeminiApiParams
   ): Promise<Result<GeneratedImageResult, GeminiAPIError | NetworkError>> {
     try {
-      // Prepare the request content with proper structure for multimodal input
       const requestContent: unknown[] = []
 
-      // Structure the contents properly for image generation/editing
-      // Priority: inputImages > inputImage > text-only
       if (params.inputImages && params.inputImages.length > 0) {
-        // For multi-image: multiple inlineData parts + text
         const parts: unknown[] = params.inputImages.map((img) => ({
           inlineData: {
             data: img.data,
@@ -203,7 +163,6 @@ class GeminiClientImpl implements GeminiClient {
         parts.push({ text: params.prompt })
         requestContent.push({ parts })
       } else if (params.inputImage) {
-        // For image editing: provide image first, then text instructions
         requestContent.push({
           parts: [
             {
@@ -218,7 +177,6 @@ class GeminiClientImpl implements GeminiClient {
           ],
         })
       } else {
-        // For text-to-image: provide only text prompt
         requestContent.push({
           parts: [
             {
@@ -228,13 +186,9 @@ class GeminiClientImpl implements GeminiClient {
         })
       }
 
-      // Determine effective quality
       const effectiveQuality = params.quality ?? this.defaultQuality
-
-      // Select model based on quality preset
       const modelName = effectiveQuality === 'quality' ? GEMINI_MODELS.PRO : GEMINI_MODELS.FLASH
 
-      // Construct config object for generateContent
       const imageConfig: Record<string, string> = {}
       if (params.aspectRatio) {
         imageConfig['aspectRatio'] = params.aspectRatio
@@ -243,7 +197,6 @@ class GeminiClientImpl implements GeminiClient {
         imageConfig['imageSize'] = params.imageSize
       }
 
-      // Build config with optional thinkingConfig
       const thinkingConfig =
         effectiveQuality === 'balanced' ? { thinkingConfig: { thinkingLevel: 'high' } } : {}
 
@@ -253,10 +206,8 @@ class GeminiClientImpl implements GeminiClient {
         ...thinkingConfig,
       }
 
-      // Construct tools array for Google Search grounding
       const tools = params.useGoogleSearch ? [{ googleSearch: {} }] : undefined
 
-      // Generate content using Gemini API
       const rawResponse = await this.genai.models.generateContent({
         model: modelName,
         contents: requestContent,
@@ -264,11 +215,8 @@ class GeminiClientImpl implements GeminiClient {
         ...(tools && { tools }),
       })
 
-      // Validate response structure with type guard
       if (!isGeminiResponse(rawResponse)) {
         const responseStructure = analyzeResponseStructure(rawResponse)
-
-        // Check if it's an error response from Gemini
         const asRecord = rawResponse as Record<string, unknown>
         if (asRecord['error']) {
           const error = asRecord['error'] as Record<string, unknown>
@@ -285,19 +233,17 @@ class GeminiClientImpl implements GeminiClient {
         return Err(
           new GeminiAPIError('Invalid response structure from Gemini API', {
             message: 'The API returned an unexpected response format',
-            responseStructure: responseStructure,
+            responseStructure,
             stage: 'response_validation',
             suggestion: 'Check if the API endpoint or model configuration is correct',
           })
         )
       }
 
-      // Extract the actual response data (handle wrapped responses)
       const responseData = (rawResponse as Record<string, unknown>)['response']
         ? ((rawResponse as Record<string, unknown>)['response'] as GeminiResponse)
         : (rawResponse as GeminiResponse)
 
-      // Check for prompt feedback (safety blocking)
       const responseAsRecord = responseData as Record<string, unknown>
       if (responseAsRecord['promptFeedback']) {
         const promptFeedback = responseAsRecord['promptFeedback'] as Record<string, unknown>
@@ -324,7 +270,6 @@ class GeminiClientImpl implements GeminiClient {
         }
       }
 
-      // Check for candidates
       if (!responseData.candidates || responseData.candidates.length === 0) {
         return Err(
           new GeminiAPIError('No image generated: Content may have been filtered', {
@@ -347,7 +292,6 @@ class GeminiClientImpl implements GeminiClient {
 
       const parts = candidate.content.parts
 
-      // Handle finish reason specific errors before checking parts
       if (candidate.finishReason) {
         const finishReason = candidate.finishReason
 
@@ -398,12 +342,10 @@ class GeminiClientImpl implements GeminiClient {
         )
       }
 
-      // Check if we got an image or text (error message)
       const imagePart = parts.find((part) => part.inlineData?.data)
       const textPart = parts.find((part) => part.text)
 
       if (!imagePart?.inlineData) {
-        // If there's text, it's likely an error message from Gemini
         const errorMessage = textPart?.text || 'Image generation failed'
 
         return Err(
@@ -416,12 +358,11 @@ class GeminiClientImpl implements GeminiClient {
         )
       }
 
-      // Convert base64 image data to Buffer
       const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64')
       const mimeType = imagePart.inlineData.mimeType || 'image/png'
 
-      // Create metadata
-      const metadata: GeminiGenerationMetadata = {
+      const metadata: GeneratedImageMetadata = {
+        provider: 'gemini',
         model: modelName,
         prompt: params.prompt,
         mimeType,
@@ -446,7 +387,6 @@ class GeminiClientImpl implements GeminiClient {
   ): Result<never, GeminiAPIError | NetworkError> {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
-    // Check if it's a network error
     if (this.isNetworkError(error)) {
       return Err(
         new NetworkError(
@@ -457,7 +397,6 @@ class GeminiClientImpl implements GeminiClient {
       )
     }
 
-    // Check if it's an API-specific error
     if (this.isAPIError(error)) {
       return Err(
         new GeminiAPIError(
@@ -468,7 +407,6 @@ class GeminiClientImpl implements GeminiClient {
       )
     }
 
-    // Generic API error
     return Err(
       new GeminiAPIError(
         `Failed to generate image with prompt "${prompt}": ${errorMessage}`,
@@ -521,17 +459,11 @@ class GeminiClientImpl implements GeminiClient {
   }
 }
 
-/**
- * Creates a new Gemini API client
- * @param config Configuration containing API key and other settings
- * @returns Result containing the client or an error
- */
 export function createGeminiClient(config: Config): Result<GeminiClient, GeminiAPIError> {
   try {
     const createClient = async () => {
       await applyProxyFetch()
 
-      // Build httpOptions with optional baseUrl
       const httpOptions: { baseUrl?: string; timeout?: number } = {}
       if (config.geminiApiBaseUrl) {
         httpOptions.baseUrl = config.geminiApiBaseUrl
@@ -541,12 +473,11 @@ export function createGeminiClient(config: Config): Result<GeminiClient, GeminiA
       }
 
       return new GoogleGenAI({
-        apiKey: config.geminiApiKey,
-        ...(Object.keys(httpOptions).length > 0 && { httpOptions })
+        apiKey: config.geminiApiKey || '',
+        ...(Object.keys(httpOptions).length > 0 && { httpOptions }),
       }) as unknown as GeminiClientInstance
     }
 
-    // Create client synchronously with lazy proxy initialization
     let genaiInstance: GeminiClientInstance | null = null
     const genaiProxy = new Proxy({} as GeminiClientInstance, {
       get(_target, prop) {

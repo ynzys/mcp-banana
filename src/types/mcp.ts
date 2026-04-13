@@ -8,7 +8,17 @@
  */
 
 /**
- * Supported aspect ratios for Gemini image generation
+ * Supported image providers
+ */
+export type ImageProvider = 'gemini' | 'volcengine'
+
+/**
+ * Supported image provider values
+ */
+export const IMAGE_PROVIDER_VALUES: readonly ImageProvider[] = ['gemini', 'volcengine'] as const
+
+/**
+ * Supported aspect ratios for image generation
  */
 export type AspectRatio =
   | '1:1' // Square (default)
@@ -31,11 +41,18 @@ export type AspectRatio =
  */
 export type ImageSize = '1K' | '2K' | '4K'
 
+export type ImageOutputFormat = 'png' | 'jpeg' | 'webp'
+
+/**
+ * Supported image output format values
+ */
+export const IMAGE_OUTPUT_FORMAT_VALUES: readonly ImageOutputFormat[] = ['png', 'jpeg', 'webp'] as const
+
 /**
  * Quality presets for image generation
- * - 'fast': Nano Banana 2, fastest generation (default)
- * - 'balanced': Nano Banana 2 with enhanced thinking, better quality
- * - 'quality': Nano Banana Pro, highest quality output
+ * - 'fast': fastest generation (default)
+ * - 'balanced': better quality at moderate speed
+ * - 'quality': highest quality output
  */
 export type ImageQuality = 'fast' | 'balanced' | 'quality'
 
@@ -59,11 +76,21 @@ export const GEMINI_MODELS = {
 } as const
 
 /**
- * Parameters for image generation using Gemini API
+ * Volcengine image generation model identifiers
+ */
+export const VOLCENGINE_MODELS = {
+  /** Seedream 4.5 - default Volcengine model with better resolution and aspect ratio support */
+  SEEDREAM_LITE: 'doubao-seedream-4-5-251128',
+} as const
+
+/**
+ * Parameters for image generation
  */
 export interface GenerateImageParams {
   /** Prompt for image generation */
   prompt: string
+  /** Optional image provider override. Defaults to IMAGE_PROVIDER environment variable. */
+  provider?: ImageProvider
   /** Optional file name for the generated image (if not specified, generates an auto-named file in IMAGE_OUTPUT_DIR) */
   fileName?: string
   /** Absolute path to input image for editing (optional) */
@@ -86,8 +113,10 @@ export interface GenerateImageParams {
   imageSize?: ImageSize
   /** Intended use for the image (e.g., cookbook cover, social media post). Helps tailor visual style and quality */
   purpose?: string
-  /** Quality preset for image generation (default: "fast"). Controls model selection and thinking configuration */
+  /** Quality preset for image generation (default: "fast") */
   quality?: ImageQuality
+  /** Output image format. Defaults to provider-specific behavior, currently png for Volcengine. */
+  outputFormat?: ImageOutputFormat
   /** Return generated image as base64 data in the response (default: false). Image is always saved to disk regardless */
   returnBase64?: boolean
   /** Multiple input images as base64 for multi-image composition (optional). Cannot be used with other image input params */

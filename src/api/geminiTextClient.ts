@@ -107,7 +107,7 @@ class GeminiTextClientImpl implements GeminiTextClient {
   private async getGenai(): Promise<GeminiAIInstance> {
     if (!this.genai) {
       await applyProxyFetch()
-      this.genai = new GoogleGenAI({ apiKey: this.config.geminiApiKey }) as unknown as GeminiAIInstance
+      this.genai = new GoogleGenAI({ apiKey: this.config.geminiApiKey || '' }) as unknown as GeminiAIInstance
     }
     return this.genai
   }

@@ -10,6 +10,7 @@ import {
   GeminiAPIError,
   InputValidationError,
   NetworkError,
+  VolcengineAPIError,
   type Result,
 } from '../utils/errors.js'
 import { Logger } from '../utils/logger.js'
@@ -89,6 +90,7 @@ function convertErrorToStructured(error: Error): {
     error instanceof InputValidationError ||
     error instanceof FileOperationError ||
     error instanceof GeminiAPIError ||
+    error instanceof VolcengineAPIError ||
     error instanceof NetworkError ||
     error instanceof ConfigError
   ) {
@@ -100,7 +102,7 @@ function convertErrorToStructured(error: Error): {
     } as Record<string, unknown>
 
     // Include context details for GeminiAPIError to provide better debugging info
-    if (error instanceof GeminiAPIError && error.context) {
+    if ((error instanceof GeminiAPIError || error instanceof VolcengineAPIError) && error.context) {
       // Add non-sensitive context information
       const { suggestion, ...otherContext } = error.context as Record<string, unknown>
       if (Object.keys(otherContext).length > 0) {

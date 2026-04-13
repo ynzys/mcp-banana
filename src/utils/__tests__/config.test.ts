@@ -132,7 +132,9 @@ describe('config', () => {
     it('should return success for valid config', () => {
       // Arrange
       const config = {
+        imageProvider: 'gemini' as const,
         geminiApiKey: 'valid-api-key-12345',
+        volcengineApiKey: undefined,
         imageOutputDir: './output',
         apiTimeout: 30000,
         skipPromptEnhancement: false,

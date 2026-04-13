@@ -36,6 +36,7 @@ The prompt optimizer uses a **Subject–Context–Style** framework (powered by 
 
 ## Features
 
+- **Multi-Provider Support**: Use either Google Gemini or Volcengine Seedream behind the same `generate_image` MCP tool, with provider selection via config or per-request override.
 - **Built-in Prompt Optimization**: Your simple prompt is automatically enriched with photographic and artistic details — lighting, composition, atmosphere — using Gemini 2.5 Flash. No prompt engineering skills required.
 - **Three Quality Tiers**: Choose between fast iteration, balanced quality, or maximum fidelity with Nano Banana 2 (Gemini 3.1 Flash Image) and Nano Banana Pro (Gemini 3 Pro Image). [See Quality Presets](#quality-presets).
 - **Image Editing**: Transform existing images with natural language instructions (image-to-image) while preserving original style and visual consistency.
@@ -90,15 +91,19 @@ npx mcp-hydrocoder-image skills install --path ~/.claude/skills
 ## Prerequisites
 
 - **Node.js** 20 or higher
-- **Gemini API Key** - Get yours at [Google AI Studio](https://aistudio.google.com/apikey)
+- **API Key**
+  - Gemini: get yours at [Google AI Studio](https://aistudio.google.com/apikey)
+  - Volcengine: create an Ark API key in the Volcengine console
 - An MCP-compatible AI tool: **Cursor**, **Claude Code**, **Codex**, or others
 - Basic terminal/command line knowledge
 
 ## Quick Start
 
-### 1. Get Your Gemini API Key
+### 1. Get Your API Key
 
-Get your API key from [Google AI Studio](https://aistudio.google.com/apikey)
+Choose a provider and create an API key:
+- **Gemini**: [Google AI Studio](https://aistudio.google.com/apikey)
+- **Volcengine**: Volcengine Ark console (`ARK_API_KEY`-compatible key)
 
 ### 2. MCP Configuration
 
@@ -112,6 +117,7 @@ command = "npx"
 args = ["-y", "mcp-hydrocoder-image"]
 
 [mcp_servers.mcp-hydrocoder-image.env]
+IMAGE_PROVIDER = "gemini"
 GEMINI_API_KEY = "your_gemini_api_key_here"
 IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 API_TIMEOUT = "120000"  # Optional: timeout in milliseconds (default: 120s)
@@ -131,6 +137,7 @@ Add to your Cursor settings:
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
+        "IMAGE_PROVIDER": "gemini",
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
         "API_TIMEOUT": "120000"
@@ -148,6 +155,7 @@ Add to your Cursor settings:
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
+        "IMAGE_PROVIDER": "gemini",
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
         "API_TIMEOUT": "120000"
@@ -164,6 +172,7 @@ Run in your project directory to enable for that project:
 ```bash
 cd /path/to/your/project
 claude mcp add mcp-hydrocoder-image \
+  --env IMAGE_PROVIDER=gemini \
   --env GEMINI_API_KEY=your-api-key \
   --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
   --env API_TIMEOUT=120000 \
@@ -174,6 +183,7 @@ Or add globally for all projects:
 
 ```bash
 claude mcp add mcp-hydrocoder-image --scope user \
+  --env IMAGE_PROVIDER=gemini \
   --env GEMINI_API_KEY=your-api-key \
   --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
   --env API_TIMEOUT=120000 \
@@ -190,6 +200,7 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
+        "IMAGE_PROVIDER": "gemini",
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
         "API_TIMEOUT": "120000"
@@ -207,6 +218,7 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
+        "IMAGE_PROVIDER": "gemini",
         "GEMINI_API_KEY": "your_gemini_api_key_here",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
         "API_TIMEOUT": "120000"
@@ -263,7 +275,39 @@ IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 
 > **Note**: The base URL should be the root domain (e.g., `https://llm.myseek.fun`), without the `/v1` suffix — the SDK will append the API version automatically.
 
-## Quality Presets
+### Volcengine Example
+
+To use Volcengine Seedream as the default backend, switch provider and set a Volcengine API key:
+
+**Claude Code:**
+```bash
+claude mcp add mcp-hydrocoder-image \
+  --env IMAGE_PROVIDER=volcengine \
+  --env VOLCENGINE_API_KEY=your-volcengine-api-key \
+  --env VOLCENGINE_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3 \
+  --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
+  -- npx -y mcp-hydrocoder-image
+```
+
+**Cursor / JSON config:**
+```json
+{
+  "mcpServers": {
+    "mcp-hydrocoder-image": {
+      "command": "npx",
+      "args": ["-y", "mcp-hydrocoder-image"],
+      "env": {
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
+        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
+      }
+    }
+  }
+}
+```
+
 
 Choose the right balance of speed, quality, and cost:
 
@@ -363,7 +407,9 @@ The server uses a two-stage process with separate models for each stage:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `prompt` | string | Yes | Text description or editing instruction |
+| `provider` | string | - | Optional provider override: `gemini` or `volcengine`. Defaults to `IMAGE_PROVIDER` |
 | `quality` | string | - | Quality preset: `fast` (default), `balanced`, `quality`. Overrides `IMAGE_QUALITY` env var for this request |
+| `outputFormat` | string | - | Output image format: `png`, `jpeg`, `webp`. Currently used by Volcengine provider |
 | `inputImagePath` | string | - | Absolute path to input image for image-to-image editing |
 | `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Alternative to `inputImagePath` |
 | `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Used with `inputImage` |

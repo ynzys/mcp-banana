@@ -4,40 +4,20 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { GeminiAPIError } from '../errors'
+import { GeminiAPIError, VolcengineAPIError } from '../errors'
 
-describe('GeminiAPIError', () => {
+describe('VolcengineAPIError', () => {
   describe('suggestion getter', () => {
-    it('should reference both models when message contains model/access/permission keywords', () => {
-      // Arrange
-      const error = new GeminiAPIError('Model not found or access denied')
+    it('should reference Seedream model when message contains model/access/permission keywords', () => {
+      const error = new VolcengineAPIError('Permission denied for model access')
 
-      // Act
-      const suggestion = error.suggestion
-
-      // Assert - should mention both models
-      expect(suggestion).toContain('gemini-3.1-flash-image-preview')
-      expect(suggestion).toContain('gemini-3-pro-image-preview')
-    })
-
-    it('should not contain only a single hardcoded model name for model-related errors', () => {
-      // Arrange
-      const error = new GeminiAPIError('Permission denied for model access')
-
-      // Act
-      const suggestion = error.suggestion
-
-      // Assert - suggestion should reference both models, not just one
-      expect(suggestion).toMatch(/gemini-3\.1-flash-image-preview/)
-      expect(suggestion).toMatch(/gemini-3-pro-image-preview/)
+      expect(error.suggestion).toContain('doubao-seedream-4-5-251128')
     })
 
     it('should use custom suggestion when provided', () => {
-      // Arrange
-      const customSuggestion = 'Custom suggestion text'
-      const error = new GeminiAPIError('Some error', customSuggestion)
+      const customSuggestion = 'Custom Volcengine suggestion'
+      const error = new VolcengineAPIError('Some error', customSuggestion)
 
-      // Act & Assert
       expect(error.suggestion).toBe(customSuggestion)
     })
   })

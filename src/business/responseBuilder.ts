@@ -4,7 +4,7 @@
  */
 
 import * as path from 'node:path'
-import type { GeneratedImageResult } from '../api/geminiClient.js'
+import type { GeneratedImageResult } from '../api/imageProvider.js'
 import type { McpToolResponse, StructuredContent } from '../types/mcp.js'
 import {
   type BaseError,
@@ -14,6 +14,7 @@ import {
   InputValidationError,
   NetworkError,
   SecurityError,
+  VolcengineAPIError,
 } from '../utils/errors.js'
 
 // Constants for MIME types and error handling
@@ -86,6 +87,7 @@ function convertErrorToStructured(error: BaseError | Error): {
     error instanceof InputValidationError ||
     error instanceof FileOperationError ||
     error instanceof GeminiAPIError ||
+    error instanceof VolcengineAPIError ||
     error instanceof NetworkError ||
     error instanceof ConfigError ||
     error instanceof SecurityError

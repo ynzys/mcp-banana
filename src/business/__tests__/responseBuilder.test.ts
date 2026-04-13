@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GeneratedImageResult } from '../../api/geminiClient'
+import type { GeneratedImageResult } from '../../api/imageProvider'
 import {
   FileOperationError,
   GeminiAPIError,
