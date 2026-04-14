@@ -1,6 +1,6 @@
 # MCP HydroCoder Image 🍌
 
-> AI image generation and editing MCP server for Cursor, Claude Code, Codex, and any MCP-compatible tool — powered by Nano Banana 2 and Nano Banana Pro (Google Gemini).
+> AI image generation and editing MCP server for Cursor, Claude Code, Codex, and any MCP-compatible tool — powered by Volcengine Seedream and Google Gemini.
 
 [![npm version](https://badge.fury.io/js/mcp-hydrocoder-image.svg)](https://www.npmjs.com/package/mcp-hydrocoder-image)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -36,7 +36,8 @@ The prompt optimizer uses a **Subject–Context–Style** framework (powered by 
 
 ## Features
 
-- **Multi-Provider Support**: Use either Google Gemini or Volcengine Seedream behind the same MCP server, with provider selection via config or per-request override.
+- **Multi-Provider Support**: Use either Volcengine Seedream or Google Gemini behind the same MCP server, with provider selection via config or per-request override.
+- **Volcengine-First Production Path**: README and install examples now default to Volcengine because it is the more stable day-to-day path for text-to-image and grouped output in this project.
 - **Dedicated Multi-Image Tooling**: Use `generate_image` for single-image work and `generate_multi_image` for grouped multi-image output with server-side fan-out and prompt normalization.
 - **Built-in Prompt Optimization**: Your simple prompt is automatically enriched with photographic and artistic details — lighting, composition, atmosphere — using Gemini 2.5 Flash. No prompt engineering skills required.
 - **Three Quality Tiers**: Choose between fast iteration, balanced quality, or maximum fidelity with Nano Banana 2 (Gemini 3.1 Flash Image) and Nano Banana Pro (Gemini 3 Pro Image). [See Quality Presets](#quality-presets).
@@ -83,8 +84,8 @@ npx mcp-hydrocoder-image skills install --path ~/.claude/skills
 | | MCP Server | Agent Skill |
 |---|---|---|
 | **Use when** | Your AI tool does not have built-in image generation | Your AI tool already generates images natively |
-| **Requires** | Gemini API key | Nothing |
-| **What it does** | Generates images via Gemini API with automatic prompt optimization | Teaches the AI to write better prompts |
+| **Requires** | Volcengine or Gemini API key | Nothing |
+| **What it does** | Generates images via Volcengine or Gemini API with automatic prompt optimization | Teaches the AI to write better prompts |
 | **Works with** | MCP-compatible tools (Cursor, Claude Code, Codex, etc.) | Any tool supporting the [Agent Skills](https://agentskills.io) open standard |
 
 ---
@@ -93,8 +94,8 @@ npx mcp-hydrocoder-image skills install --path ~/.claude/skills
 
 - **Node.js** 20 or higher
 - **API Key**
-  - Gemini: get yours at [Google AI Studio](https://aistudio.google.com/apikey)
   - Volcengine: create an Ark API key in the Volcengine console
+  - Gemini: get yours at [Google AI Studio](https://aistudio.google.com/apikey)
 - An MCP-compatible AI tool: **Cursor**, **Claude Code**, **Codex**, or others
 - Basic terminal/command line knowledge
 
@@ -103,8 +104,10 @@ npx mcp-hydrocoder-image skills install --path ~/.claude/skills
 ### 1. Get Your API Key
 
 Choose a provider and create an API key:
-- **Gemini**: [Google AI Studio](https://aistudio.google.com/apikey)
 - **Volcengine**: Volcengine Ark console (`ARK_API_KEY`-compatible key)
+- **Gemini**: [Google AI Studio](https://aistudio.google.com/apikey)
+
+> **Recommended default**: Start with Volcengine. In this project it is the preferred production path, especially for single-image generation, grouped multi-image workflows, and predictable output sizing.
 
 ### 2. MCP Configuration
 
@@ -118,8 +121,10 @@ command = "npx"
 args = ["-y", "mcp-hydrocoder-image"]
 
 [mcp_servers.mcp-hydrocoder-image.env]
-IMAGE_PROVIDER = "gemini"
-GEMINI_API_KEY = "your_gemini_api_key_here"
+IMAGE_PROVIDER = "volcengine"
+VOLCENGINE_API_KEY = "your_volcengine_api_key_here"
+VOLCENGINE_MODEL = "doubao-seedream-4-5-251128"
+VOLCENGINE_API_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
 IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 API_TIMEOUT = "120000"  # Optional: timeout in milliseconds (default: 120s)
 ```
@@ -138,8 +143,10 @@ Add to your Cursor settings:
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
-        "IMAGE_PROVIDER": "gemini",
-        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
         "API_TIMEOUT": "120000"
       }
@@ -156,8 +163,10 @@ Add to your Cursor settings:
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
-        "IMAGE_PROVIDER": "gemini",
-        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
         "API_TIMEOUT": "120000"
       }
@@ -173,8 +182,10 @@ Run in your project directory to enable for that project:
 ```bash
 cd /path/to/your/project
 claude mcp add mcp-hydrocoder-image \
-  --env IMAGE_PROVIDER=gemini \
-  --env GEMINI_API_KEY=your-api-key \
+  --env IMAGE_PROVIDER=volcengine \
+  --env VOLCENGINE_API_KEY=your-volcengine-api-key \
+  --env VOLCENGINE_MODEL=doubao-seedream-4-5-251128 \
+  --env VOLCENGINE_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3 \
   --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
   --env API_TIMEOUT=120000 \
   -- npx -y mcp-hydrocoder-image
@@ -184,8 +195,10 @@ Or add globally for all projects:
 
 ```bash
 claude mcp add mcp-hydrocoder-image --scope user \
-  --env IMAGE_PROVIDER=gemini \
-  --env GEMINI_API_KEY=your-api-key \
+  --env IMAGE_PROVIDER=volcengine \
+  --env VOLCENGINE_API_KEY=your-volcengine-api-key \
+  --env VOLCENGINE_MODEL=doubao-seedream-4-5-251128 \
+  --env VOLCENGINE_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3 \
   --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
   --env API_TIMEOUT=120000 \
   -- npx -y mcp-hydrocoder-image
@@ -201,8 +214,10 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
-        "IMAGE_PROVIDER": "gemini",
-        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
         "IMAGE_OUTPUT_DIR": "/absolute/path/to/images",
         "API_TIMEOUT": "120000"
       }
@@ -219,8 +234,10 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
       "command": "npx",
       "args": ["-y", "mcp-hydrocoder-image"],
       "env": {
-        "IMAGE_PROVIDER": "gemini",
-        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
         "IMAGE_OUTPUT_DIR": "C:\\absolute\\path\\to\\images",
         "API_TIMEOUT": "120000"
       }
@@ -236,7 +253,7 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
 - Defaults to `./output` in the current working directory if not specified
 - Directory will be created automatically if it doesn't exist
 
-#### Gemini Local MCP Example
+#### Volcengine Local MCP Example
 
 For local MCP testing, build the project first and point your MCP client at the local `dist/index.js` entry instead of `npx`.
 
@@ -252,8 +269,10 @@ command = "node"
 args = ["C:\\workspace\\develop\\ccExtensions\\mcpBanana\\dist\\index.js"]
 
 [mcp_servers.mcp-hydrocoder-image-local.env]
-IMAGE_PROVIDER = "gemini"
-GEMINI_API_KEY = "your_gemini_api_key_here"
+IMAGE_PROVIDER = "volcengine"
+VOLCENGINE_API_KEY = "your_volcengine_api_key_here"
+VOLCENGINE_MODEL = "doubao-seedream-4-5-251128"
+VOLCENGINE_API_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
 IMAGE_OUTPUT_DIR = "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\output"
 API_TIMEOUT = "120000"
 ```
@@ -268,8 +287,10 @@ API_TIMEOUT = "120000"
         "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\dist\\index.js"
       ],
       "env": {
-        "IMAGE_PROVIDER": "gemini",
-        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_PROVIDER": "volcengine",
+        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
+        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
+        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
         "IMAGE_OUTPUT_DIR": "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\output",
         "API_TIMEOUT": "120000"
       }
@@ -280,7 +301,18 @@ API_TIMEOUT = "120000"
 
 If you move the repo, update both the `args` path and `IMAGE_OUTPUT_DIR` to the new absolute path.
 
-#### Custom API Base URL (Third-party Proxy)
+#### Gemini Example
+
+If you prefer Gemini, switch `IMAGE_PROVIDER` to `gemini` and replace the Volcengine variables with `GEMINI_API_KEY`. Gemini remains supported, but the README now treats it as the optional path rather than the default install path.
+
+For standard direct access to the official Gemini endpoint, you only need:
+- `IMAGE_PROVIDER=gemini`
+- `GEMINI_API_KEY=your_gemini_api_key_here`
+- `IMAGE_OUTPUT_DIR=/absolute/path/to/images`
+
+`GEMINI_API_BASE_URL` is optional. Add it only when you use a third-party proxy, relay, or custom compatible gateway.
+
+#### Gemini Custom API Base URL (Third-party Proxy)
 
 To use a third-party API endpoint or proxy, add the `GEMINI_API_BASE_URL` environment variable:
 
@@ -320,11 +352,11 @@ IMAGE_OUTPUT_DIR = "/absolute/path/to/images"
 
 > **Note**: The base URL should be the root domain (e.g., `https://llm.myseek.fun`), without the `/v1` suffix — the SDK will append the API version automatically.
 
-### Volcengine Example
+### Volcengine Notes
 
-To use Volcengine Seedream as the default backend, switch provider and set a Volcengine API key.
+Volcengine is the recommended default provider in this project.
 
-Current implementation status for Volcengine in this repo:
+Current implementation status and behavior:
 - Stable path: text-to-image
 - Reference-image workflows are wired through the OpenAI-compatible image API using the `image` field
 - Base64 image inputs are normalized to the official Volcengine format: `data:image/<format>;base64,<Base64编码>`
@@ -332,35 +364,6 @@ Current implementation status for Volcengine in this repo:
 - If the user does not specify `aspectRatio` or `imageSize`, Gemini and Volcengine default to `16:9` and `4K`
 - If the user specifies `aspectRatio` and/or `imageSize`, the server automatically normalizes the final `WxH` into Volcengine's legal pixel range
 - When the user provides local image paths, they should be passed through `inputImagePath` / `inputImagePaths` instead of being summarized into the prompt
-
-**Claude Code:**
-```bash
-claude mcp add mcp-hydrocoder-image \
-  --env IMAGE_PROVIDER=volcengine \
-  --env VOLCENGINE_API_KEY=your-volcengine-api-key \
-  --env VOLCENGINE_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3 \
-  --env IMAGE_OUTPUT_DIR=/absolute/path/to/images \
-  -- npx -y mcp-hydrocoder-image
-```
-
-**Cursor / JSON config:**
-```json
-{
-  "mcpServers": {
-    "mcp-hydrocoder-image": {
-      "command": "npx",
-      "args": ["-y", "mcp-hydrocoder-image"],
-      "env": {
-        "IMAGE_PROVIDER": "volcengine",
-        "VOLCENGINE_API_KEY": "your_volcengine_api_key_here",
-        "VOLCENGINE_MODEL": "doubao-seedream-4-5-251128",
-        "VOLCENGINE_API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3",
-        "IMAGE_OUTPUT_DIR": "/absolute/path/to/images"
-      }
-    }
-  }
-}
-```
 
 
 Choose the right balance of speed, quality, and cost:
