@@ -283,6 +283,49 @@ function validateOutputCount(outputCount?: number): Result<number | undefined, I
   return Ok(outputCount)
 }
 
+function validateImageRequests(
+  imageRequests?: string[]
+): Result<string[] | undefined, InputValidationError> {
+  if (imageRequests === undefined) {
+    return Ok(undefined)
+  }
+
+  if (!Array.isArray(imageRequests) || imageRequests.length === 0) {
+    return Err(
+      new InputValidationError(
+        'imageRequests must be a non-empty string array',
+        'Provide imageRequests as an array of per-image prompt strings.'
+      )
+    )
+  }
+
+  const normalizedRequests: string[] = []
+  for (const request of imageRequests) {
+    if (typeof request !== 'string') {
+      return Err(
+        new InputValidationError(
+          'Each imageRequests item must be a string',
+          'Ensure every imageRequests entry is a text prompt.'
+        )
+      )
+    }
+
+    const promptResult = validatePrompt(request.trim())
+    if (!promptResult.success) {
+      return Err(
+        new InputValidationError(
+          `Invalid imageRequests item: ${promptResult.error.message}`,
+          'Ensure every imageRequests entry is a non-empty prompt shorter than 4000 characters.'
+        )
+      )
+    }
+
+    normalizedRequests.push(promptResult.data)
+  }
+
+  return Ok(normalizedRequests)
+}
+
 /**
  * Validates complete GenerateImageParams object
  */
@@ -304,10 +347,28 @@ export function validateGenerateImageParams(
     return Err(outputCountResult.error)
   }
 
+  const imageRequestsResult = validateImageRequests(params.imageRequests)
+  if (!imageRequestsResult.success) {
+    return Err(imageRequestsResult.error)
+  }
+
   // Validate prompt
   const promptResult = validatePrompt(params.prompt)
   if (!promptResult.success) {
     return Err(promptResult.error)
+  }
+
+  if (
+    imageRequestsResult.data &&
+    outputCountResult.data !== undefined &&
+    outputCountResult.data !== imageRequestsResult.data.length
+  ) {
+    return Err(
+      new InputValidationError(
+        `outputCount (${outputCountResult.data}) must match imageRequests length (${imageRequestsResult.data.length})`,
+        'Keep outputCount aligned with imageRequests length, or omit outputCount and let the server infer it.'
+      )
+    )
   }
 
   // Validate input image path if provided

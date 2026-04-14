@@ -206,6 +206,47 @@ describe('inputValidator', () => {
         expect(result.data).toEqual(validParams)
       }
     })
+
+    it('should accept valid imageRequests aligned with outputCount', () => {
+      const validParams: GenerateImageParams = {
+        prompt: '制作一组产品宣传图',
+        outputCount: 2,
+        imageRequests: ['白底主视觉，正面展示产品', '场景图，展示产品使用状态'],
+      }
+
+      const result = validateGenerateImageParams(validParams)
+
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject empty imageRequests', () => {
+      const invalidParams: GenerateImageParams = {
+        prompt: 'test',
+        imageRequests: [],
+      }
+
+      const result = validateGenerateImageParams(invalidParams)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.message).toContain('imageRequests must be a non-empty string array')
+      }
+    })
+
+    it('should reject mismatched outputCount and imageRequests length', () => {
+      const invalidParams: GenerateImageParams = {
+        prompt: 'test',
+        outputCount: 3,
+        imageRequests: ['第一张', '第二张'],
+      }
+
+      const result = validateGenerateImageParams(invalidParams)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.message).toContain('outputCount (3) must match imageRequests length (2)')
+      }
+    })
   })
 
   describe('validateGenerateImageParams with aspectRatio', () => {

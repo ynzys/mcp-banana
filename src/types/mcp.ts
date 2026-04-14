@@ -87,7 +87,7 @@ export const VOLCENGINE_MODELS = {
  * Parameters for image generation
  */
 export interface GenerateImageParams {
-  /** Prompt for image generation */
+  /** Shared prompt or overall requirements for image generation */
   prompt: string
   /** Optional image provider override. Defaults to IMAGE_PROVIDER environment variable. */
   provider?: ImageProvider
@@ -119,6 +119,8 @@ export interface GenerateImageParams {
   outputFormat?: ImageOutputFormat
   /** Number of output images to generate when the provider supports grouped output. Use for requests like 4 images, 4 variations, or grouped outputs. Currently implemented for Volcengine. */
   outputCount?: number
+  /** Optional per-image prompts for grouped output. The server rewrites them into an explicit numbered multi-image prompt. */
+  imageRequests?: string[]
   /** Return generated image as base64 data in the response (default: false). Image is always saved to disk regardless */
   returnBase64?: boolean
   /** Multiple input images as base64 for multi-image composition (optional). Cannot be used with other image input params */

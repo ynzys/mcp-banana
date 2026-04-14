@@ -194,26 +194,65 @@ describe('MCP Server', () => {
     const toolsList = mcpServer.getToolsList()
 
     // Assert: Verify that generate_image tool is registered
-    expect(toolsList.tools).toHaveLength(1)
-    expect(toolsList.tools[0].name).toBe('generate_image')
-    expect(toolsList.tools[0].description).toContain('Generate, edit, blend, or merge')
-    expect(toolsList.tools[0].inputSchema).toBeDefined()
+    expect(toolsList.tools).toHaveLength(2)
+    const generateImageTool = toolsList.tools.find((tool) => tool.name === 'generate_image')
+    const generateMultiImageTool = toolsList.tools.find((tool) => tool.name === 'generate_multi_image')
+
+    expect(generateImageTool).toBeDefined()
+    expect(generateMultiImageTool).toBeDefined()
+    expect(generateImageTool?.description).toContain('Generate, edit, blend, or merge')
+    expect(generateImageTool?.description).toContain('Use this tool for standard single-image generation and image editing')
+    expect(generateImageTool?.description).toContain('prefer generate_multi_image')
+    expect(generateMultiImageTool?.description).toContain('Generate multiple images in a single grouped tool call')
+    expect(generateImageTool?.inputSchema).toBeDefined()
 
     // Verify basic schema structure
-    const schema = toolsList.tools[0].inputSchema
+    const schema = generateImageTool?.inputSchema
     expect(schema.type).toBe('object')
     expect(schema.properties).toHaveProperty('prompt')
     expect(schema.properties?.prompt).toEqual({
       type: 'string',
       description:
-        'The prompt for image generation (English recommended for optimal structured prompt enhancement)',
+        'Shared prompt or overall requirements for single-image generation or editing. If the user wants multiple images in one request, prefer generate_multi_image instead. English recommended for prompt enhancement.',
     })
     expect(schema.properties).toHaveProperty('fileName')
     expect(schema.properties?.fileName).toEqual({
       type: 'string',
       description: 'Custom file name for the output image. Auto-generated if not specified.',
     })
+    expect(schema.properties).toHaveProperty('imageRequests')
+    expect(schema.properties?.imageRequests).toEqual({
+      type: 'array',
+      description:
+        'Backward-compatible per-image prompts for generate_image. For new grouped multi-image requests, prefer generate_multi_image instead.',
+      items: {
+        type: 'string',
+      },
+    })
+    expect(schema.properties?.outputCount).toEqual({
+      type: 'integer',
+      description:
+        'Backward-compatible grouped output count for generate_image. For new multi-image requests, prefer generate_multi_image instead. Currently wired for Volcengine, but final image count still depends on provider behavior.',
+    })
     expect(schema.required).toContain('prompt')
+
+    expect(generateMultiImageTool?.inputSchema.properties?.outputCount).toEqual({
+      type: 'integer',
+      description:
+        'Target number of images to generate in one grouped multi-image call. Prefer values greater than 1. If omitted, the server will try to infer the count from prompts like "4张图" or "4 images".',
+    })
+  })
+
+  it('should execute generate_multi_image as a grouped request', async () => {
+    const mcpServer = createMCPServer()
+
+    const result = await mcpServer.callTool('generate_multi_image', {
+      prompt: '请生成4张电商产品图，风格统一',
+    })
+
+    expect(result).toBeDefined()
+    expect(result.isError).toBe(false)
+    expect(result.content).toHaveLength(1)
   })
 
   it('should return file URI when no fileName is specified', async () => {

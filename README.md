@@ -36,7 +36,7 @@ The prompt optimizer uses a **Subject–Context–Style** framework (powered by 
 
 ## Features
 
-- **Multi-Provider Support**: Use either Google Gemini or Volcengine Seedream behind the same `generate_image` MCP tool, with provider selection via config or per-request override.
+- **Multi-Provider Support**: Use either Google Gemini or Volcengine Seedream behind the same MCP server, with provider selection via config or per-request override.
 - **Built-in Prompt Optimization**: Your simple prompt is automatically enriched with photographic and artistic details — lighting, composition, atmosphere — using Gemini 2.5 Flash. No prompt engineering skills required.
 - **Three Quality Tiers**: Choose between fast iteration, balanced quality, or maximum fidelity with Nano Banana 2 (Gemini 3.1 Flash Image) and Nano Banana Pro (Gemini 3 Pro Image). [See Quality Presets](#quality-presets).
 - **Image Editing**: Transform existing images with natural language instructions (image-to-image) while preserving original style and visual consistency.
@@ -401,6 +401,38 @@ Your prompt is automatically enhanced with rich details about lighting, material
 (with aspectRatio: "21:9")
 ```
 
+### Grouped Multi-Image Generation
+
+For a grouped multi-image task, prefer `generate_multi_image` instead of repeating `generate_image`.
+
+**Natural-language grouped request:**
+```text
+"Use generate_multi_image to create 4 unified e-commerce product images of the same minimalist white thermos cup: hero shot, side-detail shot, handheld lifestyle shot, and desk scene. Return 4 separate images in one run."
+```
+
+**Structured grouped request with inferred numbering:**
+```json
+{
+  "prompt": "同一款极简白色保温杯，整体风格统一，高级感、干净、真实、适合品牌官网和详情页使用。",
+  "outputCount": 4,
+  "provider": "volcengine"
+}
+```
+
+**Structured grouped request with explicit per-image prompts:**
+```json
+{
+  "prompt": "同一款极简白色保温杯，整体风格统一，高级感、干净、真实、适合品牌官网和详情页使用。",
+  "provider": "volcengine",
+  "imageRequests": [
+    "电商主图，白底，正面展示产品",
+    "侧面细节图，突出杯盖和材质纹理",
+    "手持使用场景图，突出尺寸感",
+    "办公桌场景图，氛围高级"
+  ]
+}
+```
+
 ## API Reference
 
 ### `generate_image` Tool
@@ -408,6 +440,8 @@ Your prompt is automatically enhanced with rich details about lighting, material
 The server uses a two-stage process with separate models for each stage:
 1. **Prompt Optimization** (Gemini 2.5 Flash): Refines your prompt using the Subject–Context–Style framework. Skippable via `SKIP_PROMPT_ENHANCEMENT`.
 2. **Image Generation** (Nano Banana 2 or Pro): Creates the final image. Model varies by quality preset.
+
+Use `generate_image` as the default tool for single-image generation and image editing. If the user wants multiple images in one grouped request, prefer `generate_multi_image`.
 
 #### Parameters
 
@@ -417,7 +451,7 @@ The server uses a two-stage process with separate models for each stage:
 | `provider` | string | - | Optional provider override: `gemini` or `volcengine`. Defaults to `IMAGE_PROVIDER` |
 | `quality` | string | - | Quality preset: `fast` (default), `balanced`, `quality`. Overrides `IMAGE_QUALITY` env var for this request |
 | `outputFormat` | string | - | Output image format if supported by the provider. Some provider endpoints may ignore or reject format overrides |
-| `outputCount` | integer | - | Best-effort number of output images to request when the provider supports grouped output. Currently wired for Volcengine, but final image count still depends on provider behavior |
+| `outputCount` | integer | - | Backward-compatible grouped output count for `generate_image`. For new multi-image requests, prefer `generate_multi_image` |
 | `inputImagePath` | string | - | Absolute path to input image for image-to-image editing. Supported by Gemini and by Volcengine reference-image workflows |
 | `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Gemini accepts raw base64; Volcengine sends it as `data:image/<format>;base64,<data>` and uses `inputImageMimeType` to build the official request format |
 | `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Required for correct Volcengine Data URL formatting when `inputImage` is provided |
@@ -427,12 +461,32 @@ The server uses a two-stage process with separate models for each stage:
 | `fileName` | string | - | Custom filename for output (auto-generated if not specified). Extension is auto-appended based on output format if omitted |
 | `skipPromptEnhancement` | boolean | - | Skip prompt enhancement and use the prompt as-is. Recommended for multi-image blending. Overrides `SKIP_PROMPT_ENHANCEMENT` env var. Default: `false` |
 | `aspectRatio` | string | - | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, `1:4`, `1:8`, `4:1`, `8:1` |
+| `imageRequests` | array | - | Backward-compatible per-image prompts for `generate_image`. For new grouped multi-image requests, prefer `generate_multi_image` |
 | `imageSize` | string | - | `1K`, `2K`, `4K`. Leave unspecified for standard quality |
 | `blendImages` | boolean | - | Enable multi-image blending for combining multiple visual elements naturally |
 | `maintainCharacterConsistency` | boolean | - | Maintain character appearance consistency across different poses and scenes |
 | `useWorldKnowledge` | boolean | - | Use real-world knowledge for accurate context (historical figures, landmarks, factual scenarios) |
 | `useGoogleSearch` | boolean | - | Enable Google Search grounding for real-time factual accuracy |
 | `purpose` | string | - | Intended use (e.g., "cookbook cover", "social media post"). Helps tailor visual style and details |
+
+### `generate_multi_image` Tool
+
+Use `generate_multi_image` for grouped multi-image generation in a single tool call. This is the preferred entry for Notebook planners that might otherwise split one user request into multiple `generate_image` calls.
+
+#### Recommended patterns
+
+- Use `outputCount` when the user wants multiple images with shared overall constraints.
+- Use `imageRequests` when the user wants several distinct images in one grouped request.
+- If `outputCount` is omitted, the server will try to infer it from phrases such as `4张图`, `四张海报`, or `4 images`.
+
+#### Example
+
+```json
+{
+  "prompt": "请生成4张统一风格的电商产品图，主题都是同一款极简白色保温杯，分别覆盖主图、侧面细节、手持使用场景、办公桌场景。要求返回4张独立图片，不要拆成多次生成。",
+  "provider": "volcengine"
+}
+```
 
 #### Response
 
