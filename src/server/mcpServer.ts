@@ -135,13 +135,13 @@ function createInputSchema(multiOnly = false) {
       aspectRatio: {
         type: 'string' as const,
         description:
-          'Aspect ratio for the generated image. When using Volcengine and this is omitted, the server defaults to 16:9.',
+          'Aspect ratio for the generated image. When omitted, the server defaults to 16:9 for Gemini and Volcengine.',
         enum: ['1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
       },
       imageSize: {
         type: 'string' as const,
         description:
-          'Image resolution for high-quality output. Specify "1K", "2K", or "4K" when you need specific resolution. When using Volcengine and this is omitted, the server defaults to 4K and normalizes the final size into the provider legal pixel range.',
+          'Image resolution for high-quality output. Specify "1K", "2K", or "4K" when you need specific resolution. When omitted, the server defaults to 4K for Gemini and Volcengine. Volcengine also normalizes the final size into the provider legal pixel range.',
         enum: ['1K', '2K', '4K'],
       },
       purpose: {

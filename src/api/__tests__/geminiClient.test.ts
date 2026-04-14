@@ -754,6 +754,16 @@ describe('geminiClient', () => {
         expect(result.data.imageData).toBeInstanceOf(Buffer)
         expect(result.data.metadata.prompt).toBe('test prompt without aspect ratio')
       }
+      expect(mockGeminiClientInstance.models.generateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            imageConfig: {
+              aspectRatio: '16:9',
+              imageSize: '4K',
+            },
+          }),
+        })
+      )
     })
 
     it('should generate image with different aspectRatio values', async () => {
@@ -797,6 +807,16 @@ describe('geminiClient', () => {
         expect(result.data.imageData).toBeInstanceOf(Buffer)
         expect(result.data.metadata.prompt).toBe('test prompt with 21:9 aspect ratio')
       }
+      expect(mockGeminiClientInstance.models.generateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            imageConfig: {
+              aspectRatio: '21:9',
+              imageSize: '4K',
+            },
+          }),
+        })
+      )
     })
   })
 

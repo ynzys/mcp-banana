@@ -121,6 +121,9 @@ interface ErrorWithCode extends Error {
   code?: string
 }
 
+const DEFAULT_GEMINI_ASPECT_RATIO = '16:9'
+const DEFAULT_GEMINI_IMAGE_SIZE = '4K'
+
 /**
  * Parameters for Gemini API image generation
  */
@@ -189,19 +192,16 @@ class GeminiClientImpl implements GeminiClient {
       const effectiveQuality = params.quality ?? this.defaultQuality
       const modelName = effectiveQuality === 'quality' ? GEMINI_MODELS.PRO : GEMINI_MODELS.FLASH
 
-      const imageConfig: Record<string, string> = {}
-      if (params.aspectRatio) {
-        imageConfig['aspectRatio'] = params.aspectRatio
-      }
-      if (params.imageSize) {
-        imageConfig['imageSize'] = params.imageSize
+      const imageConfig: Record<string, string> = {
+        aspectRatio: params.aspectRatio ?? DEFAULT_GEMINI_ASPECT_RATIO,
+        imageSize: params.imageSize ?? DEFAULT_GEMINI_IMAGE_SIZE,
       }
 
       const thinkingConfig =
         effectiveQuality === 'balanced' ? { thinkingConfig: { thinkingLevel: 'high' } } : {}
 
       const config = {
-        ...(Object.keys(imageConfig).length > 0 && { imageConfig }),
+        imageConfig,
         responseModalities: ['IMAGE'],
         ...thinkingConfig,
       }
