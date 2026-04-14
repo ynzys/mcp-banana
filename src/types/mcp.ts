@@ -144,10 +144,27 @@ export interface MCPServerConfig {
 /**
  * Content types for MCP responses
  */
-export type McpContent = {
+export interface McpTextContent {
   type: 'text'
   text: string
 }
+
+export interface McpImageContent {
+  type: 'image'
+  data: string
+  mimeType: string
+}
+
+export interface McpResourceLinkContent {
+  type: 'resource_link'
+  uri: string
+  name: string
+  title?: string
+  mimeType?: string
+  description?: string
+}
+
+export type McpContent = McpTextContent | McpImageContent | McpResourceLinkContent
 
 /**
  * MCP Tool Response format
@@ -161,17 +178,23 @@ export interface McpToolResponse {
 /**
  * Structured content for successful responses
  */
+export interface StructuredContentFile {
+  uri: string
+  name: string
+  title?: string
+  mimeType: string
+  description?: string
+}
+
 export interface StructuredContent {
-  type: 'resource'
-  resource: {
-    uri: string
-    name: string
-    mimeType: string
-  }
+  type: 'image_result'
+  files: StructuredContentFile[]
+  base64Included?: boolean
   metadata: {
     model: string
     processingTime: number
     contextMethod: string
     timestamp: string
+    imageCount: number
   }
 }

@@ -198,6 +198,44 @@ export class MCPServerImpl {
             },
             required: ['prompt'],
           },
+          outputSchema: {
+            type: 'object' as const,
+            properties: {
+              type: {
+                type: 'string' as const,
+                const: 'image_result',
+              },
+              files: {
+                type: 'array' as const,
+                items: {
+                  type: 'object' as const,
+                  properties: {
+                    uri: { type: 'string' as const },
+                    name: { type: 'string' as const },
+                    title: { type: 'string' as const },
+                    mimeType: { type: 'string' as const },
+                    description: { type: 'string' as const },
+                  },
+                  required: ['uri', 'name', 'mimeType'],
+                },
+              },
+              base64Included: {
+                type: 'boolean' as const,
+              },
+              metadata: {
+                type: 'object' as const,
+                properties: {
+                  model: { type: 'string' as const },
+                  processingTime: { type: 'number' as const },
+                  contextMethod: { type: 'string' as const },
+                  timestamp: { type: 'string' as const },
+                  imageCount: { type: 'integer' as const },
+                },
+                required: ['model', 'processingTime', 'contextMethod', 'timestamp', 'imageCount'],
+              },
+            },
+            required: ['type', 'files', 'metadata'],
+          },
         },
       ],
     }
@@ -455,12 +493,7 @@ export class MCPServerImpl {
       }
 
       if (params.returnBase64) {
-        const base64Data = generationResult.data.imageData.toString('base64')
-        return this.responseBuilder.buildBase64SuccessResponse(
-          generationResult.data,
-          savedPaths[0]!,
-          base64Data
-        )
+        return this.responseBuilder.buildBase64SuccessResponse(generationResult.data, savedPaths)
       }
       return savedPaths.length > 1
         ? this.responseBuilder.buildMultiSuccessResponse(generationResult.data, savedPaths)

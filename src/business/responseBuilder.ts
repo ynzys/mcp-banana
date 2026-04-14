@@ -4,8 +4,9 @@
  */
 
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { GeneratedImageResult } from '../api/imageProvider.js'
-import type { McpToolResponse, StructuredContent } from '../types/mcp.js'
+import type { McpToolResponse, StructuredContent, StructuredContentFile } from '../types/mcp.js'
 import {
   type BaseError,
   ConfigError,
@@ -34,6 +35,64 @@ const DEFAULT_MIME_TYPE = MIME_TYPES.PNG
 const UNKNOWN_ERROR_CODE = 'UNKNOWN_ERROR'
 const DEFAULT_ERROR_SUGGESTION = 'Please try again or contact support if the problem persists'
 
+function toFileUri(filePath: string): string {
+  return pathToFileURL(path.resolve(filePath)).toString()
+}
+
+function createMetadata(generationResult: GeneratedImageResult, imageCount: number) {
+  return {
+    model: generationResult.metadata.model,
+    processingTime: 0,
+    contextMethod: 'structured_prompt',
+    timestamp: generationResult.metadata.timestamp.toISOString(),
+    imageCount,
+  }
+}
+
+function createFileDescriptor(filePath: string, index: number, total: number) {
+  const fileName = path.basename(filePath)
+  const ordinal = total > 1 ? ` ${index + 1}` : ''
+
+  return {
+    uri: toFileUri(filePath),
+    name: fileName,
+    title: fileName,
+    mimeType: getMimeTypeFromPath(filePath),
+    description: `Generated image${ordinal}`,
+  }
+}
+
+function toResourceLinkContent(file: StructuredContentFile) {
+  return {
+    type: 'resource_link' as const,
+    ...file,
+  }
+}
+
+function createStructuredContent(
+  generationResult: GeneratedImageResult,
+  filePaths: string[],
+  base64Included = false
+): StructuredContent {
+  return {
+    type: 'image_result',
+    files: filePaths.map((filePath, index) => createFileDescriptor(filePath, index, filePaths.length)),
+    ...(base64Included ? { base64Included: true } : {}),
+    metadata: createMetadata(generationResult, filePaths.length),
+  }
+}
+
+function getGeneratedVariants(generationResult: GeneratedImageResult) {
+  return generationResult.images?.length
+    ? generationResult.images
+    : [
+        {
+          imageData: generationResult.imageData,
+          mimeType: generationResult.metadata.mimeType,
+        },
+      ]
+}
+
 /**
  * Interface for response builder functionality
  */
@@ -45,8 +104,7 @@ export interface ResponseBuilder {
   ): McpToolResponse
   buildBase64SuccessResponse(
     generationResult: GeneratedImageResult,
-    filePath: string,
-    base64Data: string
+    filePaths: string[]
   ): McpToolResponse
   buildErrorResponse(error: BaseError | Error): McpToolResponse
 }
@@ -129,33 +187,11 @@ export function createResponseBuilder(): ResponseBuilder {
       generationResult: GeneratedImageResult,
       filePath: string
     ): McpToolResponse {
-      // File-based implementation: Always return file path, never base64
-      // This avoids MCP token limit issues (25,000 tokens max)
-      const mimeType = getMimeTypeFromPath(filePath)
-      const fileName = path.basename(filePath)
-
-      const structuredContent: StructuredContent = {
-        type: 'resource',
-        resource: {
-          uri: `file://${filePath}`,
-          name: fileName,
-          mimeType,
-        },
-        metadata: {
-          model: generationResult.metadata.model,
-          processingTime: 0, // Not tracked in simplified version
-          contextMethod: 'structured_prompt',
-          timestamp: generationResult.metadata.timestamp.toISOString(),
-        },
-      }
+      const structuredContent = createStructuredContent(generationResult, [filePath])
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(structuredContent),
-          },
-        ],
+        content: structuredContent.files.map((file) => toResourceLinkContent(file)),
+        structuredContent,
         isError: false,
       }
     },
@@ -164,28 +200,11 @@ export function createResponseBuilder(): ResponseBuilder {
       generationResult: GeneratedImageResult,
       filePaths: string[]
     ): McpToolResponse {
-      const files = filePaths.map((filePath) => ({
-        uri: `file://${filePath}`,
-        name: path.basename(filePath),
-        mimeType: getMimeTypeFromPath(filePath),
-      }))
+      const structuredContent = createStructuredContent(generationResult, filePaths)
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              type: 'multi_image_result',
-              files,
-              metadata: {
-                model: generationResult.metadata.model,
-                processingTime: 0,
-                contextMethod: 'structured_prompt',
-                timestamp: generationResult.metadata.timestamp.toISOString(),
-              },
-            }),
-          },
-        ],
+        content: structuredContent.files.map((file) => toResourceLinkContent(file)),
+        structuredContent,
         isError: false,
       }
     },
@@ -199,35 +218,18 @@ export function createResponseBuilder(): ResponseBuilder {
      */
     buildBase64SuccessResponse(
       generationResult: GeneratedImageResult,
-      filePath: string,
-      base64Data: string
+      filePaths: string[]
     ): McpToolResponse {
-      const mimeType = getMimeTypeFromPath(filePath)
-      const fileName = path.basename(filePath)
-
-      const responseData = {
-        type: 'resource',
-        resource: {
-          uri: `file://${filePath}`,
-          name: fileName,
-          mimeType,
-        },
-        base64Data,
-        metadata: {
-          model: generationResult.metadata.model,
-          processingTime: 0,
-          contextMethod: 'structured_prompt',
-          timestamp: generationResult.metadata.timestamp.toISOString(),
-        },
-      }
+      const structuredContent = createStructuredContent(generationResult, filePaths, true)
+      const imageContents = getGeneratedVariants(generationResult).map((variant) => ({
+        type: 'image' as const,
+        data: variant.imageData.toString('base64'),
+        mimeType: variant.mimeType,
+      }))
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(responseData),
-          },
-        ],
+        content: [...imageContents, ...structuredContent.files.map((file) => toResourceLinkContent(file))],
+        structuredContent,
         isError: false,
       }
     },
