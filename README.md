@@ -281,7 +281,8 @@ To use Volcengine Seedream as the default backend, switch provider and set a Vol
 
 Current implementation status for Volcengine in this repo:
 - Stable path: text-to-image
-- Reference-image workflows are wired through the OpenAI-compatible image API
+- Reference-image workflows are wired through the OpenAI-compatible image API using the `image` field
+- Base64 image inputs are normalized to the official Volcengine format: `data:image/<format>;base64,<Base64编码>`
 - Grouped output (`outputCount`) is best-effort and depends on provider-side behavior
 - When the user provides local image paths, they should be passed through `inputImagePath` / `inputImagePaths` instead of being summarized into the prompt
 
@@ -418,9 +419,9 @@ The server uses a two-stage process with separate models for each stage:
 | `outputFormat` | string | - | Output image format if supported by the provider. Some provider endpoints may ignore or reject format overrides |
 | `outputCount` | integer | - | Best-effort number of output images to request when the provider supports grouped output. Currently wired for Volcengine, but final image count still depends on provider behavior |
 | `inputImagePath` | string | - | Absolute path to input image for image-to-image editing. Supported by Gemini and by Volcengine reference-image workflows |
-| `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Supported by Gemini; Volcengine support depends on provider-side image field compatibility |
-| `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Used with `inputImage` |
-| `inputImages` | array | - | Multiple input images for multi-image composition. Supported by Gemini and by Volcengine when mapped to reference-image arrays |
+| `inputImage` | string | - | Base64 encoded image data for image-to-image editing. Gemini accepts raw base64; Volcengine sends it as `data:image/<format>;base64,<data>` and uses `inputImageMimeType` to build the official request format |
+| `inputImageMimeType` | string | - | MIME type of the input image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/bmp`). Required for correct Volcengine Data URL formatting when `inputImage` is provided |
+| `inputImages` | array | - | Multiple input images for multi-image composition. Each item uses `{ data, mimeType }`; Volcengine converts them to `data:image/<format>;base64,<data>` entries in the `image` array |
 | `inputImagePaths` | array | - | Multiple input image file paths for multi-image composition. Supported by Gemini and by Volcengine when mapped to reference-image arrays |
 | `returnBase64` | boolean | - | Return the generated image as base64 data in the response. Image is always saved to disk regardless |
 | `fileName` | string | - | Custom filename for output (auto-generated if not specified). Extension is auto-appended based on output format if omitted |

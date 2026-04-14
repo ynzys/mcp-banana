@@ -96,7 +96,7 @@ export class MCPServerImpl {
               inputImage: {
                 type: 'string' as const,
                 description:
-                  'Optional base64 encoded image data for image-to-image generation. Supported by Gemini; Volcengine support depends on provider-side image field compatibility.',
+                  'Optional base64 encoded image data for image-to-image generation. Gemini accepts raw base64; Volcengine sends this as `data:image/<format>;base64,<data>` and requires `inputImageMimeType` for correct formatting.',
               },
               inputImageMimeType: {
                 type: 'string' as const,
@@ -113,7 +113,7 @@ export class MCPServerImpl {
                   properties: {
                     data: {
                       type: 'string' as const,
-                      description: 'Base64 encoded image data. Do not include data URI prefix.',
+                      description: 'Base64 encoded image data. Raw base64 is accepted; for Volcengine it will be sent as `data:image/<format>;base64,<data>` using the paired `mimeType`.',
                     },
                     mimeType: {
                       type: 'string' as const,
@@ -278,16 +278,16 @@ export class MCPServerImpl {
     let inputImageData: string | undefined
     let inputImageMimeType: string | undefined
     let inputImagesData: Array<{ data: string; mimeType: string }> | undefined
+    const extToMime: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+    }
 
     if (params.inputImagePaths && params.inputImagePaths.length > 0) {
-      const extToMime: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.webp': 'image/webp',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-      }
       inputImagesData = await Promise.all(
         params.inputImagePaths.map(async (filePath) => {
           const buffer = await fs.readFile(filePath)
@@ -302,16 +302,18 @@ export class MCPServerImpl {
       inputImageMimeType = inputImagesData[0]?.mimeType
     } else if (params.inputImages && params.inputImages.length > 0) {
       inputImagesData = params.inputImages.map((img) => ({
-        data: img.data.replace(/^data:image\/[a-z]+;base64,/, ''),
+        data: img.data.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, ''),
         mimeType: img.mimeType,
       }))
       inputImageData = inputImagesData[0]?.data
       inputImageMimeType = inputImagesData[0]?.mimeType
     } else if (params.inputImagePath) {
       const imageBuffer = await fs.readFile(params.inputImagePath)
+      const ext = path.extname(params.inputImagePath).toLowerCase()
       inputImageData = imageBuffer.toString('base64')
+      inputImageMimeType = extToMime[ext] || 'image/jpeg'
     } else if (params.inputImage) {
-      inputImageData = params.inputImage.replace(/^data:image\/[a-z]+;base64,/, '')
+      inputImageData = params.inputImage.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '')
       inputImageMimeType = params.inputImageMimeType
     }
 
