@@ -236,6 +236,50 @@ Or add via JSON config (`~/.claude/settings.json` for global, `.mcp.json` for pr
 - Defaults to `./output` in the current working directory if not specified
 - Directory will be created automatically if it doesn't exist
 
+#### Gemini Local MCP Example
+
+For local MCP testing, build the project first and point your MCP client at the local `dist/index.js` entry instead of `npx`.
+
+```bash
+npm install
+npm run build
+```
+
+**Codex (`~/.codex/config.toml` on Windows):**
+```toml
+[mcp_servers.mcp-hydrocoder-image-local]
+command = "node"
+args = ["C:\\workspace\\develop\\ccExtensions\\mcpBanana\\dist\\index.js"]
+
+[mcp_servers.mcp-hydrocoder-image-local.env]
+IMAGE_PROVIDER = "gemini"
+GEMINI_API_KEY = "your_gemini_api_key_here"
+IMAGE_OUTPUT_DIR = "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\output"
+API_TIMEOUT = "120000"
+```
+
+**Cursor / Claude Code JSON config (Windows local repo example):**
+```json
+{
+  "mcpServers": {
+    "mcp-hydrocoder-image-local": {
+      "command": "node",
+      "args": [
+        "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\dist\\index.js"
+      ],
+      "env": {
+        "IMAGE_PROVIDER": "gemini",
+        "GEMINI_API_KEY": "your_gemini_api_key_here",
+        "IMAGE_OUTPUT_DIR": "C:\\workspace\\develop\\ccExtensions\\mcpBanana\\output",
+        "API_TIMEOUT": "120000"
+      }
+    }
+  }
+}
+```
+
+If you move the repo, update both the `args` path and `IMAGE_OUTPUT_DIR` to the new absolute path.
+
 #### Custom API Base URL (Third-party Proxy)
 
 To use a third-party API endpoint or proxy, add the `GEMINI_API_BASE_URL` environment variable:
