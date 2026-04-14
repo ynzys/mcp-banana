@@ -94,7 +94,7 @@ describe('volcengineClient', () => {
 
     expect(result.success).toBe(true)
     const request = mockImagesGenerate.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(request.size).toBe('64x64')
+    expect(request.size).toBe('4096x2304')
   })
 
   it('should prefer explicit aspect ratio over source dimensions', async () => {
@@ -114,7 +114,37 @@ describe('volcengineClient', () => {
 
     expect(result.success).toBe(true)
     const request = mockImagesGenerate.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(request.size).toBe('2048x1152')
+    expect(request.size).toBe('2560x1472')
+  })
+
+  it('should default to 16:9 4K when size and ratio are omitted', async () => {
+    const clientResult = createVolcengineClient(testConfig)
+    expect(clientResult.success).toBe(true)
+    if (!clientResult.success) return
+
+    const result = await clientResult.data.generateImage({
+      prompt: 'generate a product shot',
+    })
+
+    expect(result.success).toBe(true)
+    const request = mockImagesGenerate.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(request.size).toBe('4096x2304')
+  })
+
+  it('should shrink oversized square requests into Volcengine legal range', async () => {
+    const clientResult = createVolcengineClient(testConfig)
+    expect(clientResult.success).toBe(true)
+    if (!clientResult.success) return
+
+    const result = await clientResult.data.generateImage({
+      prompt: 'generate a square image',
+      aspectRatio: '1:1',
+      imageSize: '4K',
+    })
+
+    expect(result.success).toBe(true)
+    const request = mockImagesGenerate.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(request.size).toBe('3200x3200')
   })
 
   it('should keep all generated images when provider returns multiple items', async () => {

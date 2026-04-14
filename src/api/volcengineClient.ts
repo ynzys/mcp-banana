@@ -38,11 +38,12 @@ interface ImageDimensions {
 }
 
 const MIN_GROUP_IMAGE_PIXELS = 3686400
+const MAX_IMAGE_PIXELS = 10404496
+const MAX_DIMENSION = 4096
 const DIMENSION_ALIGNMENT = 64
 const DATA_URL_PREFIX_REGEX = /^data:image\/[a-z0-9.+-]+;base64,/i
-const JPEG_MARKERS_WITH_DIMENSIONS = new Set([
-  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
-])
+const DEFAULT_VOLCENGINE_ASPECT_RATIO = '16:9'
+const DEFAULT_VOLCENGINE_IMAGE_SIZE = '4K'
 
 function parseAspectRatio(aspectRatio?: string): { width: number; height: number } {
   if (!aspectRatio) {
@@ -57,220 +58,118 @@ function parseAspectRatio(aspectRatio?: string): { width: number; height: number
   return { width, height }
 }
 
-function alignDimension(value: number): number {
+function alignDimensionUp(value: number): number {
   return Math.ceil(value / DIMENSION_ALIGNMENT) * DIMENSION_ALIGNMENT
 }
 
-function normalizeDimensions(width: number, height: number): ImageDimensions | undefined {
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return undefined
-  }
+function alignDimensionDown(value: number): number {
+  return Math.max(DIMENSION_ALIGNMENT, Math.floor(value / DIMENSION_ALIGNMENT) * DIMENSION_ALIGNMENT)
+}
 
-  const MAX_DIMENSION = 4096
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height))
-  const scaledWidth = Math.max(64, Math.round(width * scale))
-  const scaledHeight = Math.max(64, Math.round(height * scale))
-
+function scaleToDimensionLimit(dimensions: ImageDimensions): ImageDimensions {
+  const scale = Math.min(1, MAX_DIMENSION / Math.max(dimensions.width, dimensions.height))
   return {
-    width: alignDimension(scaledWidth),
-    height: alignDimension(scaledHeight),
+    width: dimensions.width * scale,
+    height: dimensions.height * scale,
   }
 }
 
-function extractPngDimensions(buffer: Buffer): ImageDimensions | undefined {
-  if (buffer.length < 24 || buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a') {
-    return undefined
+function scaleToPixelRange(dimensions: ImageDimensions): ImageDimensions {
+  let next = scaleToDimensionLimit(dimensions)
+  let pixels = next.width * next.height
+
+  if (pixels < MIN_GROUP_IMAGE_PIXELS) {
+    const scaleUp = Math.sqrt(MIN_GROUP_IMAGE_PIXELS / pixels)
+    next = scaleToDimensionLimit({
+      width: next.width * scaleUp,
+      height: next.height * scaleUp,
+    })
   }
 
-  return {
-    width: buffer.readUInt32BE(16),
-    height: buffer.readUInt32BE(20),
-  }
-}
-
-function extractGifDimensions(buffer: Buffer): ImageDimensions | undefined {
-  if (buffer.length < 10) {
-    return undefined
+  pixels = next.width * next.height
+  if (pixels > MAX_IMAGE_PIXELS) {
+    const scaleDown = Math.sqrt(MAX_IMAGE_PIXELS / pixels)
+    next = scaleToDimensionLimit({
+      width: next.width * scaleDown,
+      height: next.height * scaleDown,
+    })
   }
 
-  const header = buffer.toString('ascii', 0, 6)
-  if (header !== 'GIF87a' && header !== 'GIF89a') {
-    return undefined
-  }
-
-  return {
-    width: buffer.readUInt16LE(6),
-    height: buffer.readUInt16LE(8),
-  }
-}
-
-function extractBmpDimensions(buffer: Buffer): ImageDimensions | undefined {
-  if (buffer.length < 26 || buffer.toString('ascii', 0, 2) !== 'BM') {
-    return undefined
-  }
-
-  return {
-    width: Math.abs(buffer.readInt32LE(18)),
-    height: Math.abs(buffer.readInt32LE(22)),
-  }
-}
-
-function extractWebpDimensions(buffer: Buffer): ImageDimensions | undefined {
-  if (
-    buffer.length < 30 ||
-    buffer.toString('ascii', 0, 4) !== 'RIFF' ||
-    buffer.toString('ascii', 8, 12) !== 'WEBP'
-  ) {
-    return undefined
-  }
-
-  const chunkType = buffer.toString('ascii', 12, 16)
-  if (chunkType === 'VP8X' && buffer.length >= 30) {
-    return {
-      width: buffer.readUIntLE(24, 3) + 1,
-      height: buffer.readUIntLE(27, 3) + 1,
-    }
-  }
-
-  if (chunkType === 'VP8L' && buffer.length >= 25) {
-    const bits = buffer.readUInt32LE(21)
-    return {
-      width: (bits & 0x3fff) + 1,
-      height: ((bits >> 14) & 0x3fff) + 1,
-    }
-  }
-
-  if (chunkType === 'VP8 ' && buffer.length >= 30) {
-    return {
-      width: buffer.readUInt16LE(26) & 0x3fff,
-      height: buffer.readUInt16LE(28) & 0x3fff,
-    }
-  }
-
-  return undefined
-}
-
-function extractJpegDimensions(buffer: Buffer): ImageDimensions | undefined {
-  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) {
-    return undefined
-  }
-
-  let offset = 2
-  while (offset + 9 < buffer.length) {
-    if (buffer[offset] !== 0xff) {
-      offset += 1
-      continue
-    }
-
-    const marker = buffer[offset + 1]
-    if (marker === undefined) {
-      break
-    }
-    if (marker === 0xd8 || marker === 0x01) {
-      offset += 2
-      continue
-    }
-    if (marker === 0xd9 || marker === 0xda) {
-      break
-    }
-    if (offset + 4 > buffer.length) {
-      break
-    }
-
-    const segmentLength = buffer.readUInt16BE(offset + 2)
-    if (JPEG_MARKERS_WITH_DIMENSIONS.has(marker) && offset + 9 < buffer.length) {
-      return {
-        width: buffer.readUInt16BE(offset + 7),
-        height: buffer.readUInt16BE(offset + 5),
-      }
-    }
-
-    if (segmentLength < 2) {
-      break
-    }
-    offset += 2 + segmentLength
-  }
-
-  return undefined
-}
-
-function extractImageDimensions(buffer: Buffer, mimeType?: string): ImageDimensions | undefined {
-  const normalizedMimeType = mimeType?.toLowerCase()
-  if (normalizedMimeType === 'image/png') {
-    return extractPngDimensions(buffer)
-  }
-  if (normalizedMimeType === 'image/jpeg') {
-    return extractJpegDimensions(buffer)
-  }
-  if (normalizedMimeType === 'image/webp') {
-    return extractWebpDimensions(buffer)
-  }
-  if (normalizedMimeType === 'image/gif') {
-    return extractGifDimensions(buffer)
-  }
-  if (normalizedMimeType === 'image/bmp') {
-    return extractBmpDimensions(buffer)
-  }
-
-  return (
-    extractPngDimensions(buffer) ||
-    extractJpegDimensions(buffer) ||
-    extractWebpDimensions(buffer) ||
-    extractGifDimensions(buffer) ||
-    extractBmpDimensions(buffer)
-  )
-}
-
-function extractSourceDimensions(imageData: string, mimeType?: string): ImageDimensions | undefined {
-  try {
-    const buffer = Buffer.from(imageData.replace(DATA_URL_PREFIX_REGEX, ''), 'base64')
-    return extractImageDimensions(buffer, mimeType)
-  } catch {
-    return undefined
-  }
+  return next
 }
 
 function mapImageSizeToVolcengineSize(
   imageSize?: string,
   aspectRatio?: string,
-  outputCount?: number,
-  sourceDimensions?: ImageDimensions
+  _outputCount?: number
 ): string | undefined {
-  if (!imageSize && !aspectRatio && !sourceDimensions) {
-    return undefined
-  }
-
-  if (!imageSize && !aspectRatio && sourceDimensions) {
-    const normalized = normalizeDimensions(sourceDimensions.width, sourceDimensions.height)
-    return normalized ? `${normalized.width}x${normalized.height}` : undefined
-  }
-
   const baseSizeMap: Record<string, number> = {
     '1K': 1024,
     '2K': 2048,
     '4K': 4096,
   }
 
-  const { width: ratioWidth, height: ratioHeight } = aspectRatio
-    ? parseAspectRatio(aspectRatio)
-    : (sourceDimensions ?? { width: 1, height: 1 })
-  const targetEdge = imageSize ? (baseSizeMap[imageSize] ?? baseSizeMap['1K']!) : 1024
+  const effectiveAspectRatio = aspectRatio ?? DEFAULT_VOLCENGINE_ASPECT_RATIO
+  const effectiveImageSize = imageSize ?? DEFAULT_VOLCENGINE_IMAGE_SIZE
+  const { width: ratioWidth, height: ratioHeight } = parseAspectRatio(effectiveAspectRatio)
+  const targetEdge = baseSizeMap[effectiveImageSize] ?? baseSizeMap[DEFAULT_VOLCENGINE_IMAGE_SIZE]!
   const isLandscape = ratioWidth >= ratioHeight
 
-  let widthValue = isLandscape ? targetEdge : Math.round((targetEdge * ratioWidth) / ratioHeight)
-  let heightValue = isLandscape ? Math.round((targetEdge * ratioHeight) / ratioWidth) : targetEdge
+  let widthValue = isLandscape ? targetEdge : (targetEdge * ratioWidth) / ratioHeight
+  let heightValue = isLandscape ? (targetEdge * ratioHeight) / ratioWidth : targetEdge
 
-  if (outputCount && outputCount > 1) {
-    const pixels = widthValue * heightValue
-    if (pixels < MIN_GROUP_IMAGE_PIXELS) {
-      const scale = Math.sqrt(MIN_GROUP_IMAGE_PIXELS / pixels)
-      widthValue = Math.round(widthValue * scale)
-      heightValue = Math.round(heightValue * scale)
+  const scaled = scaleToPixelRange({ width: widthValue, height: heightValue })
+  widthValue = alignDimensionDown(scaled.width)
+  heightValue = alignDimensionDown(scaled.height)
+
+  while (widthValue * heightValue < MIN_GROUP_IMAGE_PIXELS) {
+    const canGrowWidth = widthValue + DIMENSION_ALIGNMENT <= MAX_DIMENSION
+    const canGrowHeight = heightValue + DIMENSION_ALIGNMENT <= MAX_DIMENSION
+    if (!canGrowWidth && !canGrowHeight) {
+      break
+    }
+
+    const widthProgress = widthValue / ratioWidth
+    const heightProgress = heightValue / ratioHeight
+    if ((widthProgress <= heightProgress && canGrowWidth) || !canGrowHeight) {
+      widthValue += DIMENSION_ALIGNMENT
+    } else {
+      heightValue += DIMENSION_ALIGNMENT
+    }
+
+    while (widthValue * heightValue > MAX_IMAGE_PIXELS) {
+      if (widthValue >= heightValue && widthValue > DIMENSION_ALIGNMENT) {
+        widthValue -= DIMENSION_ALIGNMENT
+      } else if (heightValue > DIMENSION_ALIGNMENT) {
+        heightValue -= DIMENSION_ALIGNMENT
+      } else {
+        break
+      }
     }
   }
 
-  widthValue = alignDimension(widthValue)
-  heightValue = alignDimension(heightValue)
+  while (widthValue * heightValue > MAX_IMAGE_PIXELS) {
+    if (widthValue >= heightValue && widthValue > DIMENSION_ALIGNMENT) {
+      widthValue -= DIMENSION_ALIGNMENT
+    } else if (heightValue > DIMENSION_ALIGNMENT) {
+      heightValue -= DIMENSION_ALIGNMENT
+    } else {
+      break
+    }
+  }
+
+  widthValue = alignDimensionUp(widthValue)
+  heightValue = alignDimensionUp(heightValue)
+
+  while (widthValue * heightValue > MAX_IMAGE_PIXELS) {
+    if (widthValue >= heightValue && widthValue > DIMENSION_ALIGNMENT) {
+      widthValue -= DIMENSION_ALIGNMENT
+    } else if (heightValue > DIMENSION_ALIGNMENT) {
+      heightValue -= DIMENSION_ALIGNMENT
+    } else {
+      break
+    }
+  }
 
   return `${widthValue}x${heightValue}`
 }
@@ -328,20 +227,7 @@ class VolcengineClientImpl implements VolcengineClient {
         (params.inputImage
           ? [toVolcengineDataUrl(params.inputImage, params.inputImageMimeType)]
           : undefined)
-      const sourceDimensions =
-        !params.aspectRatio && !params.imageSize
-          ? (params.inputImages?.[0]
-              ? extractSourceDimensions(params.inputImages[0].data, params.inputImages[0].mimeType)
-              : params.inputImage
-                ? extractSourceDimensions(params.inputImage, params.inputImageMimeType)
-                : undefined)
-          : undefined
-      const size = mapImageSizeToVolcengineSize(
-        params.imageSize,
-        params.aspectRatio,
-        params.outputCount,
-        sourceDimensions
-      )
+      const size = mapImageSizeToVolcengineSize(params.imageSize, params.aspectRatio, params.outputCount)
       const responseFormat: 'b64_json' | 'url' = params.returnBase64 ? 'b64_json' : 'url'
 
       const request: Record<string, unknown> = {
@@ -364,7 +250,6 @@ class VolcengineClientImpl implements VolcengineClient {
         imageCount: imageValues?.length ?? 0,
         firstImageLength: imageValues?.[0]?.length ?? 0,
         size,
-        sourceDimensions,
         responseFormat,
         outputCount: params.outputCount ?? 1,
       })

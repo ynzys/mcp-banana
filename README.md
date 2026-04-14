@@ -284,6 +284,8 @@ Current implementation status for Volcengine in this repo:
 - Reference-image workflows are wired through the OpenAI-compatible image API using the `image` field
 - Base64 image inputs are normalized to the official Volcengine format: `data:image/<format>;base64,<Base64编码>`
 - Grouped output (`outputCount`) is best-effort and depends on provider-side behavior
+- If the user does not specify `aspectRatio` or `imageSize`, Volcengine defaults to `16:9` and `4K`
+- If the user specifies `aspectRatio` and/or `imageSize`, the server automatically normalizes the final `WxH` into Volcengine's legal pixel range
 - When the user provides local image paths, they should be passed through `inputImagePath` / `inputImagePaths` instead of being summarized into the prompt
 
 **Claude Code:**
