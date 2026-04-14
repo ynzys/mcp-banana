@@ -37,6 +37,7 @@ The prompt optimizer uses a **Subject–Context–Style** framework (powered by 
 ## Features
 
 - **Multi-Provider Support**: Use either Google Gemini or Volcengine Seedream behind the same MCP server, with provider selection via config or per-request override.
+- **Dedicated Multi-Image Tooling**: Use `generate_image` for single-image work and `generate_multi_image` for grouped multi-image output with server-side fan-out and prompt normalization.
 - **Built-in Prompt Optimization**: Your simple prompt is automatically enriched with photographic and artistic details — lighting, composition, atmosphere — using Gemini 2.5 Flash. No prompt engineering skills required.
 - **Three Quality Tiers**: Choose between fast iteration, balanced quality, or maximum fidelity with Nano Banana 2 (Gemini 3.1 Flash Image) and Nano Banana Pro (Gemini 3 Pro Image). [See Quality Presets](#quality-presets).
 - **Image Editing**: Transform existing images with natural language instructions (image-to-image) while preserving original style and visual consistency.
@@ -462,9 +463,9 @@ Use `generate_image` as the default tool for single-image generation and image e
 | `returnBase64` | boolean | - | Return the generated image as base64 data in the response. Image is always saved to disk regardless |
 | `fileName` | string | - | Custom filename for output (auto-generated if not specified). Extension is auto-appended based on output format if omitted |
 | `skipPromptEnhancement` | boolean | - | Skip prompt enhancement and use the prompt as-is. Recommended for multi-image blending. Overrides `SKIP_PROMPT_ENHANCEMENT` env var. Default: `false` |
-| `aspectRatio` | string | - | `1:1` (default), `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, `1:4`, `1:8`, `4:1`, `8:1` |
+| `aspectRatio` | string | - | `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`, `1:4`, `1:8`, `4:1`, `8:1`. When omitted, Gemini and Volcengine default to `16:9` |
 | `imageRequests` | array | - | Backward-compatible per-image prompts for `generate_image`. For new grouped multi-image requests, prefer `generate_multi_image` |
-| `imageSize` | string | - | `1K`, `2K`, `4K`. Leave unspecified for standard quality |
+| `imageSize` | string | - | `1K`, `2K`, `4K`. When omitted, Gemini and Volcengine default to `4K`. Volcengine further normalizes the final `WxH` into the provider legal pixel range |
 | `blendImages` | boolean | - | Enable multi-image blending for combining multiple visual elements naturally |
 | `maintainCharacterConsistency` | boolean | - | Maintain character appearance consistency across different poses and scenes |
 | `useWorldKnowledge` | boolean | - | Use real-world knowledge for accurate context (historical figures, landmarks, factual scenarios) |
