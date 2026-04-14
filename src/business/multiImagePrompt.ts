@@ -6,10 +6,12 @@ import { InputValidationError } from '../utils/errors.js'
 const EXPLICIT_MULTI_IMAGE_PATTERNS = [
   /第\s*[0-9一二三四五六七八九十百千]+\s*张/iu,
   /\bimage\s*[1-9]\d*\b/iu,
+  /\bshot\s*[1-9]\d*\b/iu,
+  /\bvariation\s*[1-9]\d*\b/iu,
   /\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+image\b/iu,
 ]
 const EXPLICIT_MULTI_IMAGE_SECTION_REGEX =
-  /(第\s*[0-9一二三四五六七八九十百千]+\s*张|Image[_\s]*[1-9]\d*(?:\s*\([^)]*\))?|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+Image)\s*[:：]/giu
+  /((?:第[\s　]*[0-9一二三四五六七八九十百千]+[\s　]*(?:张|幅|个)(?:图|图片)?)(?:[\s　]*(?:是|为))?|Image[_\s]*[1-9]\d*(?:\s*\([^)]*\))?(?:\s+(?:is|should\s+be))?|(?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+Image(?:\s+(?:is|should\s+be))?|(?:For\s+)?Image[_\s]*[1-9]\d*\s*,|Shot[_\s]*[1-9]\d*(?:\s+(?:is|should\s+be))?|Variation[_\s]*[1-9]\d*(?:\s+(?:is|should\s+be))?)\s*[:：，,；;、]?/giu
 
 const CHINESE_NUMBER_MAP: Record<string, number> = {
   两: 2,

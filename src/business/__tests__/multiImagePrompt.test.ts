@@ -70,6 +70,42 @@ describe('multiImagePrompt', () => {
     ])
   })
 
+  it('extracts chinese image sections written with 是', () => {
+    const result = extractExplicitImageRequests(
+      '生成2张不同风格的随机图片：第1张是未来科幻风格的城市夜景，霓虹灯闪烁，飞行汽车穿梭其中；第2张是田园风光，绿色草地，野花盛开，远处有农舍和风车。'
+    )
+
+    expect(result.sharedPrompt).toBe('生成2张不同风格的随机图片：')
+    expect(result.imageRequests).toEqual([
+      '未来科幻风格的城市夜景，霓虹灯闪烁，飞行汽车穿梭其中；',
+      '田园风光，绿色草地，野花盛开，远处有农舍和风车。',
+    ])
+  })
+
+  it('extracts chinese image sections with spaces around the index token', () => {
+    const result = extractExplicitImageRequests(
+      '生成2张不同风格的随机图片：第 1 张，未来科幻风格的城市夜景，霓虹灯闪烁；第 2 张 是田园风光，绿色草地，野花盛开。'
+    )
+
+    expect(result.sharedPrompt).toBe('生成2张不同风格的随机图片：')
+    expect(result.imageRequests).toEqual([
+      '未来科幻风格的城市夜景，霓虹灯闪烁；',
+      '田园风光，绿色草地，野花盛开。',
+    ])
+  })
+
+  it('extracts english image sections written with is and commas', () => {
+    const result = extractExplicitImageRequests(
+      'Create 2 images. Image 1 is a futuristic city skyline at night. For image 2, create a peaceful countryside with flowers and a windmill.'
+    )
+
+    expect(result.sharedPrompt).toBe('Create 2 images.')
+    expect(result.imageRequests).toEqual([
+      'a futuristic city skyline at night.',
+      'create a peaceful countryside with flowers and a windmill.',
+    ])
+  })
+
   it('builds an independent per-image prompt', () => {
     const result = buildIndependentImagePrompt('统一高级电商风格', '白底主图，正面展示产品')
 
